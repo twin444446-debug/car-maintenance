@@ -159,7 +159,7 @@ class MainActivity : Activity() {
     private fun showSection(section: String) {
         val page = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(background)
+            setBackgroundColor(this@MainActivity.background)
             fitsSystemWindows = true
         }
 
@@ -205,7 +205,7 @@ class MainActivity : Activity() {
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(14), dp(12), dp(14), dp(12))
-            setBackgroundColor(background)
+            setBackgroundColor(this@MainActivity.background)
         }
 
         when (section) {
@@ -218,7 +218,7 @@ class MainActivity : Activity() {
 
         val scroll = ScrollView(this).apply {
             isFillViewport = true
-            setBackgroundColor(background)
+            setBackgroundColor(this@MainActivity.background)
             addView(content)
         }
         page.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
