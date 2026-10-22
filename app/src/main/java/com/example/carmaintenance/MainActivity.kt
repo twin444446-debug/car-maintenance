@@ -5,6 +5,7 @@ import android.app.AlertDialog
 import android.app.DatePickerDialog
 import android.os.Bundle
 import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.text.InputType
 import android.view.Gravity
 import android.view.View
@@ -158,23 +159,53 @@ class MainActivity : Activity() {
     private fun showSection(section: String) {
         val page = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(14), dp(10), dp(14), dp(6))
-            setBackgroundColor(this@MainActivity.background)
+            setBackgroundColor(background)
             fitsSystemWindows = true
         }
 
-        page.addView(TextView(this).apply {
+        val header = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(18), dp(8), dp(12), dp(8))
+            setBackgroundColor(Color.rgb(8, 28, 43))
+        }
+
+        val menu = TextView(this).apply {
+            text = "☰"
+            textSize = 30f
+            gravity = Gravity.CENTER
+            setTextColor(textPrimary)
+            setPadding(dp(6), 0, dp(12), 0)
+            setOnClickListener { Toast.makeText(this@MainActivity, "Меню дополнительных функций", Toast.LENGTH_SHORT).show() }
+        }
+        header.addView(menu, LinearLayout.LayoutParams(dp(52), dp(56)))
+
+        val title = TextView(this).apply {
             text = section
             textSize = 25f
             typeface = android.graphics.Typeface.DEFAULT_BOLD
             setTextColor(textPrimary)
-            setPadding(dp(5), dp(8), dp(5), dp(14))
-        })
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        header.addView(title, LinearLayout.LayoutParams(0, dp(56), 1f))
+
+        val settings = TextView(this).apply {
+            text = "⚙"
+            textSize = 27f
+            gravity = Gravity.CENTER
+            setTextColor(textPrimary)
+            setPadding(dp(8), 0, dp(4), 0)
+            setOnClickListener {
+                Toast.makeText(this@MainActivity, "Настройки главного экрана будут добавлены следующим этапом", Toast.LENGTH_SHORT).show()
+            }
+        }
+        header.addView(settings, LinearLayout.LayoutParams(dp(52), dp(56)))
+        page.addView(header)
 
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(0, 0, 0, dp(8))
-            setBackgroundColor(this@MainActivity.background)
+            setPadding(dp(14), dp(12), dp(14), dp(12))
+            setBackgroundColor(background)
         }
 
         when (section) {
@@ -187,7 +218,7 @@ class MainActivity : Activity() {
 
         val scroll = ScrollView(this).apply {
             isFillViewport = true
-            setBackgroundColor(this@MainActivity.background)
+            setBackgroundColor(background)
             addView(content)
         }
         page.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
@@ -195,21 +226,22 @@ class MainActivity : Activity() {
         val nav = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
-            setBackgroundColor(surface)
-            setPadding(dp(3), dp(5), dp(3), dp(5))
+            setBackgroundColor(Color.rgb(7, 24, 38))
+            setPadding(dp(4), dp(4), dp(4), dp(4))
         }
-        val labels = listOf("Главная", "Перечень\nработ", "Регламент", "Статистика", "Ещё")
+        val labels = listOf("⌂\nГлавная", "☷\nПеречень\nработ", "▣\nРегламент", "▥\nСтатистика", "•••\nЕщё")
         sections.forEachIndexed { index, item ->
             nav.addView(TextView(this).apply {
                 text = labels[index]
-                textSize = 10.5f
+                textSize = 11f
                 gravity = Gravity.CENTER
-                setTextColor(if (item == section) accent else textSecondary)
-                setPadding(dp(2), dp(7), dp(2), dp(7))
-                minHeight = dp(48)
-                isClickable = true
-                isFocusable = true
-                if (item == section) setBackgroundColor(surfaceLight)
+                typeface = android.graphics.Typeface.DEFAULT_BOLD
+                setTextColor(if (item == section) Color.rgb(0, 235, 170) else Color.rgb(164, 190, 230))
+                setPadding(dp(2), dp(5), dp(2), dp(5))
+                minHeight = dp(58)
+                if (item == section) {
+                    background = roundedDrawable(Color.rgb(13, 52, 70), dp(8))
+                }
                 setOnClickListener { showSection(item) }
             }, LinearLayout.LayoutParams(0, -2, 1f))
         }
@@ -217,44 +249,254 @@ class MainActivity : Activity() {
         setContentView(page)
     }
 
+    private fun roundedDrawable(color: Int, radiusDp: Int): GradientDrawable =
+        GradientDrawable().apply {
+            setColor(color)
+            cornerRadius = dp(radiusDp).toFloat()
+            setStroke(dp(1), Color.rgb(20, 88, 130))
+        }
+
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
     private fun selectedCar(): Car? = cars.firstOrNull { it.id == selectedCarId }
 
     private fun showHome(root: LinearLayout) {
         val car = selectedCar()
         if (car == null) {
-            root.addView(infoCard("Ваш гараж пока пуст", "Добавьте первый автомобиль, чтобы вести его регламент и историю обслуживания."))
+            root.addView(sectionCard("Ваш гараж пока пуст"))
+            root.addView(label("Добавьте первый автомобиль, чтобы вести регламент и историю обслуживания."))
             root.addView(actionButton("＋  Добавить автомобиль") { showCarDialog(null) })
             return
         }
 
-        root.addView(infoCard(
-            "${car.brand} ${car.model}",
-            "Год выпуска: ${car.year.ifBlank { "не указан" }}\n" +
-                "Пробег: ${car.mileage.ifBlank { "не указан" }} км\n" +
-                "VIN: ${car.vin.ifBlank { "не указан" }}\n" +
-                "Двигатель: ${car.engine.ifBlank { "не указан" }}\n" +
-                "Топливо: ${car.fuel}" + if (car.hasLpg) "\nУстановлено ГБО" else ""
-        ))
-
         val carWorks = works.filter { it.carId == car.id }
         val overdue = carWorks.count { getWorkStatus(it, car) == "Необходимо выполнить" }
-        val completed = carWorks.count { it.hasLastExecution && !it.skipped &&
-            getWorkStatus(it, car) != "Необходимо выполнить" }
-
-        val stats = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setPadding(0, dp(4), 0, dp(4))
+        val completed = carWorks.count {
+            it.hasLastExecution && !it.skipped && getWorkStatus(it, car) != "Необходимо выполнить"
         }
-        stats.addView(statCard("Всего работ", carWorks.size.toString(), accent), LinearLayout.LayoutParams(0, -2, 1f))
-        stats.addView(statCard("К выполнению", overdue.toString(), red), LinearLayout.LayoutParams(0, -2, 1f))
-        stats.addView(statCard("Выполнено", completed.toString(), green), LinearLayout.LayoutParams(0, -2, 1f))
-        root.addView(stats)
 
-        root.addView(actionButton("Выбрать автомобиль") { selectCarDialog() })
-        root.addView(actionButton("Изменить автомобиль") { showCarDialog(car) })
-        root.addView(actionButton("＋  Добавить автомобиль") { showCarDialog(null) })
-        root.addView(actionButton("＋  Добавить регламентную работу") { showWorkDialog(null) })
+        // Карточка автомобиля — главный блок домашнего экрана.
+        val carCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(18), dp(16), dp(18), dp(16))
+            background = roundedDrawable(Color.rgb(9, 31, 48), dp(16))
+        }
+
+        val carTitle = TextView(this).apply {
+            text = "${car.brand} ${car.model}"
+            textSize = 22f
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            setTextColor(textPrimary)
+        }
+        carCard.addView(carTitle)
+
+        val year = if (car.year.isBlank()) "Год не указан" else "${car.year} г."
+        val mileage = if (car.mileage.isBlank()) "не указан" else "${car.mileage} км"
+        carCard.addView(TextView(this).apply {
+            text = year
+            textSize = 16f
+            setTextColor(Color.rgb(151, 193, 255))
+            setPadding(0, dp(3), 0, dp(10))
+        })
+
+        val info = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+        }
+        info.addView(carInfoColumn("◉", "Пробег", mileage), LinearLayout.LayoutParams(0, -2, 1f))
+        info.addView(carInfoColumn("▣", "VIN", if (car.vin.isBlank()) "не указан" else car.vin), LinearLayout.LayoutParams(0, -2, 1f))
+        info.addView(carInfoColumn("⚙", "Двигатель", if (car.engine.isBlank()) "не указан" else car.engine), LinearLayout.LayoutParams(0, -2, 1f))
+        carCard.addView(info)
+        carCard.setOnClickListener { showCarDialog(car) }
+
+        root.addView(carCard)
+
+        val dots = TextView(this).apply {
+            text = "●  •"
+            textSize = 17f
+            gravity = Gravity.CENTER
+            setTextColor(Color.rgb(0, 235, 170))
+            setPadding(0, dp(6), 0, dp(6))
+        }
+        root.addView(dots)
+
+        val summary = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            background = roundedDrawable(Color.rgb(9, 31, 48), dp(16))
+            setPadding(dp(8), dp(10), dp(8), dp(10))
+        }
+        summary.addView(summaryItem("✓", "Всего работ", carWorks.size.toString(), green), LinearLayout.LayoutParams(0, -2, 1f))
+        summary.addView(summaryItem("!", "Требуют выполнения", overdue.toString(), red), LinearLayout.LayoutParams(0, -2, 1f))
+        root.addView(summary)
+
+        val actions = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+        }
+        actions.addView(homeAction("🚗", "Выбрать\nавтомобиль", accent) { selectCarDialog() }, LinearLayout.LayoutParams(0, -2, 1f))
+        actions.addView(homeAction("＋", "Изменить\nавтомобиль", Color.rgb(60, 160, 235)) { showCarDialog(car) }, LinearLayout.LayoutParams(0, -2, 1f))
+        actions.addView(homeAction("＋", "Добавить\nавтомобиль", Color.rgb(130, 80, 235)) { showCarDialog(null) }, LinearLayout.LayoutParams(0, -2, 1f))
+        actions.addView(homeAction("🔧", "Добавить\nрегламент", Color.rgb(0, 210, 150)) { showWorkDialog(null) }, LinearLayout.LayoutParams(0, -2, 1f))
+        root.addView(actions)
+
+        val nearest = carWorks.sortedWith(compareBy<MaintenanceWork> {
+            if (getWorkStatus(it, car) == "Необходимо выполнить") 0 else 1
+        }.thenBy { it.lastMileage + it.intervalKm })
+
+        if (nearest.isNotEmpty()) {
+            root.addView(sectionHeader("Ближайшие работы", "Все работы ›"))
+            nearest.take(4).forEach { work ->
+                root.addView(homeWorkCard(work, car))
+            }
+        }
+    }
+
+    private fun sectionHeader(title: String, action: String = ""): TextView =
+        TextView(this).apply {
+            text = if (action.isBlank()) title else "$title                         $action"
+            textSize = 20f
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            setTextColor(textPrimary)
+            setPadding(dp(8), dp(14), dp(8), dp(8))
+        }
+
+    private fun sectionCard(title: String): TextView =
+        TextView(this).apply {
+            text = title
+            textSize = 20f
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            setTextColor(textPrimary)
+            setPadding(dp(18), dp(18), dp(18), dp(18))
+            background = roundedDrawable(Color.rgb(9, 31, 48), dp(16))
+        }
+
+    private fun carInfoColumn(icon: String, title: String, value: String): LinearLayout =
+        LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(6), dp(2), dp(6), dp(2))
+            addView(TextView(this@MainActivity).apply {
+                text = "$icon  $title"
+                textSize = 13f
+                setTextColor(Color.rgb(154, 190, 245))
+            })
+            addView(TextView(this@MainActivity).apply {
+                text = value
+                textSize = 14f
+                setTextColor(textPrimary)
+                setPadding(0, dp(3), 0, 0)
+            })
+        }
+
+    private fun summaryItem(icon: String, title: String, value: String, color: Int): LinearLayout =
+        LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(8), dp(4), dp(8), dp(4))
+            addView(TextView(this@MainActivity).apply {
+                text = icon
+                textSize = 28f
+                typeface = android.graphics.Typeface.DEFAULT_BOLD
+                setTextColor(color)
+                setPadding(0, 0, dp(10), 0)
+            })
+            addView(LinearLayout(this@MainActivity).apply {
+                orientation = LinearLayout.VERTICAL
+                addView(TextView(this@MainActivity).apply {
+                    text = title
+                    textSize = 12f
+                    setTextColor(Color.rgb(164, 190, 230))
+                })
+                addView(TextView(this@MainActivity).apply {
+                    text = value
+                    textSize = 25f
+                    typeface = android.graphics.Typeface.DEFAULT_BOLD
+                    setTextColor(textPrimary)
+                })
+            })
+        }
+
+    private fun homeAction(icon: String, title: String, color: Int, action: () -> Unit): LinearLayout =
+        LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(dp(5), dp(12), dp(5), dp(12))
+            background = roundedDrawable(Color.rgb(9, 31, 48), dp(12))
+            setOnClickListener { action() }
+            addView(TextView(this@MainActivity).apply {
+                text = icon
+                textSize = 24f
+                gravity = Gravity.CENTER
+                setTextColor(color)
+            })
+            addView(TextView(this@MainActivity).apply {
+                text = title
+                textSize = 12f
+                gravity = Gravity.CENTER
+                typeface = android.graphics.Typeface.DEFAULT_BOLD
+                setTextColor(textPrimary)
+            })
+        }
+
+    private fun homeWorkCard(work: MaintenanceWork, car: Car): LinearLayout =
+        LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(12), dp(10), dp(12), dp(10))
+            background = roundedDrawable(Color.rgb(9, 31, 48), dp(13))
+            setOnClickListener { showWorkActions(work) }
+
+            addView(TextView(this@MainActivity).apply {
+                text = when (statusColor(work, car)) {
+                    red -> "!"
+                    green -> "✓"
+                    yellow -> "●"
+                    purple -> "↷"
+                    else -> "•"
+                }
+                textSize = 26f
+                typeface = android.graphics.Typeface.DEFAULT_BOLD
+                setTextColor(statusColor(work, car))
+                gravity = Gravity.CENTER
+                setPadding(0, 0, dp(12), 0)
+            }, LinearLayout.LayoutParams(dp(42), dp(58)))
+
+            addView(LinearLayout(this@MainActivity).apply {
+                orientation = LinearLayout.VERTICAL
+                addView(TextView(this@MainActivity).apply {
+                    text = work.name
+                    textSize = 15f
+                    typeface = android.graphics.Typeface.DEFAULT_BOLD
+                    setTextColor(textPrimary)
+                })
+                addView(TextView(this@MainActivity).apply {
+                    text = workStatusLine(work, car)
+                    textSize = 12f
+                    setTextColor(Color.rgb(164, 190, 230))
+                    setPadding(0, dp(4), 0, 0)
+                })
+            }, LinearLayout.LayoutParams(0, -2, 1f))
+
+            addView(TextView(this@MainActivity).apply {
+                text = when {
+                    work.skipped -> "Пропущено"
+                    getWorkStatus(work, car) == "Необходимо выполнить" -> "Требуется"
+                    work.preventive -> "Рекомендовано"
+                    else -> "Выполнено"
+                }
+                textSize = 11f
+                typeface = android.graphics.Typeface.DEFAULT_BOLD
+                setTextColor(statusColor(work, car))
+                gravity = Gravity.CENTER
+                setPadding(dp(8), dp(7), dp(8), dp(7))
+                background = roundedDrawable(Color.argb(45, Color.red(statusColor(work, car)), Color.green(statusColor(work, car)), Color.blue(statusColor(work, car))), dp(10))
+            })
+        }.also {
+            val lp = LinearLayout.LayoutParams(-1, -2)
+            lp.bottomMargin = dp(7)
+            it.layoutParams = lp
+        }
+
+    private fun workStatusLine(work: MaintenanceWork, car: Car): String {
+        if (!work.hasLastExecution) return "Работа ещё не выполнялась"
+        val nextKm = if (work.intervalKm > 0) work.lastMileage + work.intervalKm else 0
+        return if (nextKm > 0) "Пробег: $nextKm км • после ${work.lastMileage} км" else "Выполнено ${formatDate(work.lastDate)}"
     }
 
     private fun statCard(title: String, value: String, color: Int): LinearLayout =
