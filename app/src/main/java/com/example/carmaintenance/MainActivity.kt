@@ -159,7 +159,7 @@ class MainActivity : Activity() {
         val page = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(14), dp(10), dp(14), dp(6))
-            setBackgroundColor(background)
+            setBackgroundColor(this@MainActivity.background)
             fitsSystemWindows = true
         }
 
@@ -174,7 +174,7 @@ class MainActivity : Activity() {
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(0, 0, 0, dp(8))
-            setBackgroundColor(background)
+            setBackgroundColor(this@MainActivity.background)
         }
 
         when (section) {
@@ -187,7 +187,7 @@ class MainActivity : Activity() {
 
         val scroll = ScrollView(this).apply {
             isFillViewport = true
-            setBackgroundColor(background)
+            setBackgroundColor(this@MainActivity.background)
             addView(content)
         }
         page.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
@@ -661,7 +661,6 @@ class MainActivity : Activity() {
         dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setTextColor(accent)
         dialog.getButton(AlertDialog.BUTTON_NEGATIVE)?.setTextColor(textSecondary)
         dialog.getButton(AlertDialog.BUTTON_NEUTRAL)?.setTextColor(textSecondary)
-        dialog.findViewById<TextView>(android.R.id.alertTitle)?.setTextColor(textPrimary)
         dialog.findViewById<TextView>(android.R.id.message)?.setTextColor(textSecondary)
     }
 
