@@ -2,11 +2,11 @@ package com.example.carmaintenance
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.app.DatePickerDialog
 import android.os.Bundle
 import android.graphics.Color
 import android.text.InputType
 import android.view.Gravity
-import android.view.Window
 import android.view.WindowManager
 import android.widget.*
 import org.json.JSONArray
@@ -64,13 +64,12 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Не позволяем приложению заходить под системные панели.
         window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
         window.statusBarColor = Color.WHITE
         window.navigationBarColor = Color.WHITE
         window.decorView.systemUiVisibility =
-    android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or
-    android.view.View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+            android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or
+            android.view.View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
 
         loadCars()
         loadWorks()
@@ -193,13 +192,12 @@ class MainActivity : Activity() {
             fitsSystemWindows = true
         }
 
-        val title = TextView(this).apply {
+        page.addView(TextView(this).apply {
             text = section
             textSize = 23f
             setTextColor(Color.BLACK)
             setPadding(dp(4), dp(4), dp(4), dp(8))
-        }
-        page.addView(title)
+        })
 
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -233,34 +231,27 @@ class MainActivity : Activity() {
         }
 
         val labels = listOf(
-            "Главная",
-            "Перечень\nработ",
-            "Регламент",
-            "Статистика",
-            "Ещё"
+            "Главная", "Перечень\nработ", "Регламент", "Статистика", "Ещё"
         )
 
         sections.forEachIndexed { index, item ->
-            val button = TextView(this).apply {
-                text = labels[index]
-                textSize = 10f
-                gravity = Gravity.CENTER
-                setTextColor(Color.BLACK)
-                setPadding(dp(1), dp(6), dp(1), dp(6))
-                minHeight = dp(48)
-                isClickable = true
-                isFocusable = true
-
-                if (item == section) {
-                    setBackgroundColor(Color.rgb(220, 235, 220))
-                    setTextColor(green)
-                }
-
-                setOnClickListener { showSection(item) }
-            }
-
             nav.addView(
-                button,
+                TextView(this).apply {
+                    text = labels[index]
+                    textSize = 10f
+                    gravity = Gravity.CENTER
+                    setTextColor(if (item == section) green else Color.BLACK)
+                    setPadding(dp(1), dp(6), dp(1), dp(6))
+                    minHeight = dp(48)
+                    isClickable = true
+                    isFocusable = true
+
+                    if (item == section) {
+                        setBackgroundColor(Color.rgb(220, 235, 220))
+                    }
+
+                    setOnClickListener { showSection(item) }
+                },
                 LinearLayout.LayoutParams(0, -2, 1f)
             )
         }
@@ -383,13 +374,9 @@ class MainActivity : Activity() {
         form.addView(lpg)
         form.addView(notes)
 
-        val scroll = ScrollView(this).apply {
-            addView(form)
-        }
-
         AlertDialog.Builder(this)
             .setTitle(if (existing == null) "Новый автомобиль" else "Изменить автомобиль")
-            .setView(scroll)
+            .setView(ScrollView(this).apply { addView(form) })
             .setPositiveButton("Сохранить") { _, _ ->
                 if (existing == null) {
                     val car = Car(
@@ -436,7 +423,9 @@ class MainActivity : Activity() {
         if (list.isEmpty()) root.addView(label("Работ пока нет."))
 
         list.forEach { work ->
-            root.addView(actionButton(work.name + "\n" + getWorkStatus(work, car)) {
+            root.addView(actionButton(
+                work.name + "\n" + getWorkStatus(work, car)
+            ) {
                 showWorkActions(work)
             })
         }
@@ -534,7 +523,7 @@ class MainActivity : Activity() {
 
         val form = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(32), dp(8), dp(32), dp(8))
+            setPadding(dp(24), dp(8), dp(24), dp(8))
         }
 
         val name = EditText(this).apply {
@@ -555,75 +544,208 @@ class MainActivity : Activity() {
         val notDone = CheckBox(this).apply {
             text = "Работа ещё не выполнялась"
             isChecked = existing?.hasLastExecution != true
-            isEnabled = existing == null
         }
+
+        val executionMileage = EditText(this).apply {
+            hint = "Пробег при последнем выполнении, км"
+            inputType = InputType.TYPE_CLASS_NUMBER
+            setText(
+                if (existing?.hasLastExecution == true) {
+                    existing.lastMileage.toString()
+                } else {
+                    ""
+                }
+            )
+        }
+
+        var executionDate = when {
+            existing?.hasLastExecution == true && existing.lastDate > 0L ->
+                existing.lastDate
+            else -> System.currentTimeMillis()
+        }
+
+        val dateButton = Button(this).apply {
+            isAllCaps = false
+            text = "Дата выполнения: ${formatDate(executionDate)}"
+            setOnClickListener {
+                showDatePicker(executionDate) { chosen ->
+                    executionDate = chosen
+                    text = "Дата выполнения: ${formatDate(executionDate)}"
+                }
+            }
+        }
+
+        val executionFields = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(label("Заполняй эти поля, если работа уже выполнялась."))
+            addView(dateButton)
+            addView(executionMileage)
+        }
+
+        fun updateExecutionFields() {
+            executionFields.visibility =
+                if (notDone.isChecked) android.view.View.GONE
+                else android.view.View.VISIBLE
+        }
+
+        notDone.setOnCheckedChangeListener { _, _ ->
+            updateExecutionFields()
+        }
+        updateExecutionFields()
 
         form.addView(name)
         form.addView(km)
         form.addView(months)
         form.addView(notDone)
+        form.addView(executionFields)
 
         AlertDialog.Builder(this)
             .setTitle(if (existing == null) "Добавить регламентную работу" else "Изменить работу")
-            .setView(form)
-            .setPositiveButton("Сохранить") { _, _ ->
-                val kmValue = km.text.toString().toIntOrNull() ?: 0
-                val monthValue = months.text.toString().toIntOrNull() ?: 0
-                val workName = name.text.toString().trim()
-
-                if (workName.isBlank()) {
-                    Toast.makeText(this, "Укажи название работы", Toast.LENGTH_SHORT).show()
-                    return@setPositiveButton
-                }
-
-                if (existing == null) {
-                    works.add(
-                        MaintenanceWork(
-                            id = System.currentTimeMillis(),
-                            carId = car.id,
-                            name = workName,
-                            intervalKm = kmValue,
-                            intervalMonths = monthValue,
-                            lastMileage = 0,
-                            lastDate = 0L,
-                            hasLastExecution = !notDone.isChecked
-                        )
-                    )
-                } else {
-                    existing.name = workName
-                    existing.intervalKm = kmValue
-                    existing.intervalMonths = monthValue
-                }
-
-                saveWorks()
-                showSection("Регламент")
-            }
+            .setView(ScrollView(this).apply { addView(form) })
+            .setPositiveButton("Сохранить", null)
             .setNegativeButton("Отмена", null)
-            .show()
+            .create()
+            .also { dialog ->
+                dialog.setOnShowListener {
+                    dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                        val kmValue = km.text.toString().toIntOrNull() ?: 0
+                        val monthValue = months.text.toString().toIntOrNull() ?: 0
+                        val workName = name.text.toString().trim()
+                        val hasExecution = !notDone.isChecked
+
+                        if (workName.isBlank()) {
+                            name.error = "Укажи название работы"
+                            return@setOnClickListener
+                        }
+
+                        if (hasExecution &&
+                            executionMileage.text.toString().toIntOrNull() == null
+                        ) {
+                            executionMileage.error = "Укажи пробег"
+                            return@setOnClickListener
+                        }
+
+                        val actualMileage =
+                            executionMileage.text.toString().toIntOrNull() ?: 0
+
+                        if (existing == null) {
+                            works.add(
+                                MaintenanceWork(
+                                    id = System.currentTimeMillis(),
+                                    carId = car.id,
+                                    name = workName,
+                                    intervalKm = kmValue,
+                                    intervalMonths = monthValue,
+                                    lastMileage = actualMileage,
+                                    lastDate = if (hasExecution) executionDate else 0L,
+                                    hasLastExecution = hasExecution
+                                )
+                            )
+                        } else {
+                            existing.name = workName
+                            existing.intervalKm = kmValue
+                            existing.intervalMonths = monthValue
+                            existing.hasLastExecution = hasExecution
+                            existing.lastMileage = if (hasExecution) actualMileage else 0
+                            existing.lastDate = if (hasExecution) executionDate else 0L
+                            if (!hasExecution) existing.skipped = false
+                        }
+
+                        saveWorks()
+                        dialog.dismiss()
+                        showSection("Регламент")
+                    }
+                }
+                dialog.show()
+            }
     }
 
     private fun completeWork(work: MaintenanceWork) {
         val car = cars.firstOrNull { it.id == work.carId } ?: return
-        val mileage = car.mileage.toIntOrNull()
 
-        if (mileage == null) {
-            Toast.makeText(this, "Сначала укажи пробег автомобиля", Toast.LENGTH_LONG).show()
-            return
+        val form = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(24), dp(8), dp(24), dp(8))
         }
 
-        AlertDialog.Builder(this)
-            .setTitle("Выполнить работу?")
-            .setMessage("Записать дату и текущий пробег ${mileage} км?")
-            .setPositiveButton("Подтвердить") { _, _ ->
-                work.lastMileage = mileage
-                work.lastDate = System.currentTimeMillis()
-                work.hasLastExecution = true
-                work.skipped = false
-                saveWorks()
-                showSection("Регламент")
+        val mileage = EditText(this).apply {
+            hint = "Фактический пробег выполнения, км"
+            inputType = InputType.TYPE_CLASS_NUMBER
+            setText(car.mileage)
+        }
+
+        var selectedDate = System.currentTimeMillis()
+        val dateButton = Button(this).apply {
+            isAllCaps = false
+            text = "Дата выполнения: ${formatDate(selectedDate)}"
+            setOnClickListener {
+                showDatePicker(selectedDate) { chosen ->
+                    selectedDate = chosen
+                    text = "Дата выполнения: ${formatDate(selectedDate)}"
+                }
             }
+        }
+
+        form.addView(label("Укажи фактические дату и пробег выполнения работы."))
+        form.addView(dateButton)
+        form.addView(mileage)
+
+        AlertDialog.Builder(this)
+            .setTitle("Выполнить работу")
+            .setView(form)
+            .setPositiveButton("Сохранить", null)
             .setNegativeButton("Отмена", null)
-            .show()
+            .create()
+            .also { dialog ->
+                dialog.setOnShowListener {
+                    dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                        val actualMileage = mileage.text.toString().toIntOrNull()
+
+                        if (actualMileage == null) {
+                            mileage.error = "Укажи пробег"
+                            return@setOnClickListener
+                        }
+
+                        work.lastMileage = actualMileage
+                        work.lastDate = selectedDate
+                        work.hasLastExecution = true
+                        work.skipped = false
+
+                        saveWorks()
+                        dialog.dismiss()
+                        showSection("Регламент")
+                    }
+                }
+                dialog.show()
+            }
+    }
+
+    private fun showDatePicker(
+        initialDate: Long,
+        onSelected: (Long) -> Unit
+    ) {
+        val calendar = Calendar.getInstance().apply {
+            timeInMillis = initialDate
+        }
+
+        DatePickerDialog(
+            this,
+            { _, year, month, day ->
+                val chosen = Calendar.getInstance().apply {
+                    set(Calendar.YEAR, year)
+                    set(Calendar.MONTH, month)
+                    set(Calendar.DAY_OF_MONTH, day)
+                    set(Calendar.HOUR_OF_DAY, 12)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+                onSelected(chosen.timeInMillis)
+            },
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
+        ).show()
     }
 
     private fun getWorkStatus(work: MaintenanceWork, car: Car): String {
@@ -643,15 +765,19 @@ class MainActivity : Activity() {
             dueByDate = System.currentTimeMillis() >= date.timeInMillis
         }
 
-        return if (dueByKm || dueByDate) "Необходимо выполнить" else "Срок ещё не наступил"
+        return if (dueByKm || dueByDate) {
+            "Необходимо выполнить"
+        } else {
+            "Срок ещё не наступил"
+        }
     }
 
     private fun statusColor(work: MaintenanceWork, car: Car): Int {
         if (work.skipped) return purple
         if (work.preventive) return yellow
-        if (!work.hasLastExecution || getWorkStatus(work, car) == "Необходимо выполнить") {
-            return red
-        }
+        if (!work.hasLastExecution ||
+            getWorkStatus(work, car) == "Необходимо выполнить"
+        ) return red
         return green
     }
 
