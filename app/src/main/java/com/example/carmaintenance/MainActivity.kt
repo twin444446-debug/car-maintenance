@@ -3,278 +3,212 @@ package com.example.carmaintenance
 import android.app.Activity
 import android.app.AlertDialog
 import android.app.DatePickerDialog
-import android.content.Context
-import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.graphics.Color
+import android.text.InputType
 import android.view.Gravity
-import android.view.View
+import android.view.WindowManager
 import android.widget.*
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
-import java.util.UUID
-
-private const val PREFS = "car_maintenance"
-private const val CARS_KEY = "cars"
-private const val WORKS_KEY = "maintenance_works"
-private const val SELECTED_CAR_KEY = "selected_car_id"
-
-private const val BG = 0xFF17191E.toInt()
-private const val PANEL = 0xFF252932.toInt()
-private const val TEXT = 0xFFF2F3F5.toInt()
-private const val MUTED = 0xFFADB4C0.toInt()
-private const val GREEN = 0xFF42C985.toInt()
-private const val RED = 0xFFFF6464.toInt()
-private const val PURPLE = 0xFFBE91FF.toInt()
-private const val YELLOW = 0xFFFFCF62.toInt()
-private const val BLUE = 0xFF78AEFF.toInt()
 
 data class Car(
-    val id: String = UUID.randomUUID().toString(),
-    var brand: String = "",
-    var model: String = "",
-    var year: Int = 0,
-    var vin: String = "",
-    var mileage: Int = 0,
-    var engine: String = "",
-    var fuel: String = "",
-    var hasLpg: Boolean = false,
-    var notes: String = ""
+    val id: Long,
+    var brand: String,
+    var model: String,
+    var year: String,
+    var vin: String,
+    var mileage: String,
+    var engine: String,
+    var fuel: String,
+    var hasLpg: Boolean,
+    var notes: String
 )
 
 data class MaintenanceWork(
-    val id: String = UUID.randomUUID().toString(),
-    var carId: String = "",
-    var name: String = "",
-    var intervalKm: Int = 0,
-    var intervalMonths: Int = 0,
+    val id: Long,
+    val carId: Long,
+    var name: String,
+    var intervalKm: Int,
+    var intervalMonths: Int,
     var lastMileage: Int = 0,
-    var lastDate: String = "",
+    var lastDate: Long = 0L,
     var hasLastExecution: Boolean = false,
     var skipped: Boolean = false,
-    var preventive: Boolean = false,
-    var oilType: String = "",
-    var oilName: String = ""
+    var preventive: Boolean = false
 )
 
 class MainActivity : Activity() {
 
+    private val prefs by lazy {
+        getSharedPreferences("car_maintenance", MODE_PRIVATE)
+    }
+
     private val cars = mutableListOf<Car>()
     private val works = mutableListOf<MaintenanceWork>()
+    private var selectedCarId = -1L
 
-    private lateinit var content: LinearLayout
-    private lateinit var navigation: LinearLayout
+    private val green = Color.rgb(46, 125, 50)
+    private val red = Color.rgb(198, 40, 40)
+    private val purple = Color.rgb(123, 31, 162)
+    private val yellow = Color.rgb(249, 168, 37)
 
-    private var selectedCarId = ""
-    private var currentTab = "Главная"
-
-    private val dateFormat =
-        SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
-
-    private fun today(): String =
-        dateFormat.format(Date())
-
-    private fun car(): Car? =
-        cars.find { it.id == selectedCarId }
-
-    private fun carWorks(): List<MaintenanceWork> =
-        works.filter { it.carId == selectedCarId }
+    private val sections = listOf(
+        "Главная", "Перечень работ", "Регламент", "Статистика", "Ещё"
+    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        window.statusBarColor = BG
-        window.navigationBarColor = BG
+        window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+        window.statusBarColor = Color.WHITE
+        window.navigationBarColor = Color.WHITE
+        window.decorView.systemUiVisibility =
+            android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or
+            android.view.View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
 
-        loadData()
-        createLayout()
-        showHome()
+        loadCars()
+        loadWorks()
+        selectedCarId = prefs.getLong("selected_car_id", -1L)
+
+        if (cars.none { it.id == selectedCarId } && cars.isNotEmpty()) {
+            selectedCarId = cars.first().id
+            saveSelectedCar()
+        }
+
+        showSection("Главная")
     }
 
-    // =========================================================
-    // СОХРАНЕНИЕ
-    // =========================================================
+    private fun saveSelectedCar() {
+        prefs.edit().putLong("selected_car_id", selectedCarId).apply()
+    }
 
-    private fun loadData() {
-        val prefs = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-
-        selectedCarId =
-            prefs.getString(SELECTED_CAR_KEY, "") ?: ""
-
-        try {
-            val array =
-                JSONArray(prefs.getString(CARS_KEY, "[]"))
-
-            for (i in 0 until array.length()) {
-                val o = array.getJSONObject(i)
-
-                cars.add(
-                    Car(
-                        id = o.optString(
-                            "id",
-                            UUID.randomUUID().toString()
-                        ),
-                        brand = o.optString("brand"),
-                        model = o.optString("model"),
-                        year = o.optInt("year"),
-                        vin = o.optString("vin"),
-                        mileage = o.optInt("mileage"),
-                        engine = o.optString("engine"),
-                        fuel = o.optString("fuel"),
-                        hasLpg = o.optBoolean("hasLpg"),
-                        notes = o.optString("notes")
-                    )
-                )
-            }
+    private fun loadCars() {
+        cars.clear()
+        val a = try {
+            JSONArray(prefs.getString("cars", "[]"))
         } catch (_: Exception) {
+            JSONArray()
         }
 
-        try {
-            val array =
-                JSONArray(prefs.getString(WORKS_KEY, "[]"))
-
-            for (i in 0 until array.length()) {
-                val o = array.getJSONObject(i)
-
-                works.add(
-                    MaintenanceWork(
-                        id = o.optString(
-                            "id",
-                            UUID.randomUUID().toString()
-                        ),
-                        carId = o.optString("carId"),
-                        name = o.optString("name"),
-                        intervalKm = o.optInt("intervalKm"),
-                        intervalMonths = o.optInt("intervalMonths"),
-                        lastMileage = o.optInt("lastMileage"),
-                        lastDate = o.optString("lastDate"),
-                        hasLastExecution =
-                            o.optBoolean("hasLastExecution"),
-                        skipped = o.optBoolean("skipped"),
-                        preventive = o.optBoolean("preventive"),
-                        oilType = o.optString("oilType"),
-                        oilName = o.optString("oilName")
-                    )
+        for (i in 0 until a.length()) {
+            val o = a.optJSONObject(i) ?: continue
+            cars.add(
+                Car(
+                    id = o.optLong("id", System.currentTimeMillis() + i),
+                    brand = o.optString("brand"),
+                    model = o.optString("model"),
+                    year = o.optString("year"),
+                    vin = o.optString("vin"),
+                    mileage = o.optString("mileage"),
+                    engine = o.optString("engine"),
+                    fuel = o.optString("fuel", "Бензин"),
+                    hasLpg = o.optBoolean("hasLpg"),
+                    notes = o.optString("notes")
                 )
-            }
-        } catch (_: Exception) {
-        }
-
-        if (cars.none { it.id == selectedCarId }) {
-            selectedCarId =
-                cars.firstOrNull()?.id ?: ""
+            )
         }
     }
 
-    private fun saveData() {
-
-        val carArray = JSONArray()
-
+    private fun saveCars() {
+        val a = JSONArray()
         cars.forEach { c ->
-            carArray.put(
-                JSONObject().apply {
-                    put("id", c.id)
-                    put("brand", c.brand)
-                    put("model", c.model)
-                    put("year", c.year)
-                    put("vin", c.vin)
-                    put("mileage", c.mileage)
-                    put("engine", c.engine)
-                    put("fuel", c.fuel)
-                    put("hasLpg", c.hasLpg)
-                    put("notes", c.notes)
-                }
-            )
+            a.put(JSONObject().apply {
+                put("id", c.id)
+                put("brand", c.brand)
+                put("model", c.model)
+                put("year", c.year)
+                put("vin", c.vin)
+                put("mileage", c.mileage)
+                put("engine", c.engine)
+                put("fuel", c.fuel)
+                put("hasLpg", c.hasLpg)
+                put("notes", c.notes)
+            })
         }
-
-        val workArray = JSONArray()
-
-        works.forEach { w ->
-            workArray.put(
-                JSONObject().apply {
-                    put("id", w.id)
-                    put("carId", w.carId)
-                    put("name", w.name)
-                    put("intervalKm", w.intervalKm)
-                    put("intervalMonths", w.intervalMonths)
-                    put("lastMileage", w.lastMileage)
-                    put("lastDate", w.lastDate)
-                    put(
-                        "hasLastExecution",
-                        w.hasLastExecution
-                    )
-                    put("skipped", w.skipped)
-                    put("preventive", w.preventive)
-                    put("oilType", w.oilType)
-                    put("oilName", w.oilName)
-                }
-            )
-        }
-
-        getSharedPreferences(
-            PREFS,
-            Context.MODE_PRIVATE
-        )
-            .edit()
-            .putString(
-                CARS_KEY,
-                carArray.toString()
-            )
-            .putString(
-                WORKS_KEY,
-                workArray.toString()
-            )
-            .putString(
-                SELECTED_CAR_KEY,
-                selectedCarId
-            )
-            .apply()
+        prefs.edit().putString("cars", a.toString()).apply()
     }
 
-    // =========================================================
-    // ОСНОВНОЙ ИНТЕРФЕЙС
-    // =========================================================
-
-    private fun createLayout() {
-
-        val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(BG)
+    private fun loadWorks() {
+        works.clear()
+        val a = try {
+            JSONArray(prefs.getString("maintenance_works", "[]"))
+        } catch (_: Exception) {
+            JSONArray()
         }
 
-        val header = LinearLayout(this).apply {
+        for (i in 0 until a.length()) {
+            val o = a.optJSONObject(i) ?: continue
+            val hasExecution = if (o.has("hasLastExecution")) {
+                o.optBoolean("hasLastExecution")
+            } else {
+                true
+            }
+
+            works.add(
+                MaintenanceWork(
+                    id = o.optLong("id", System.currentTimeMillis() + i),
+                    carId = o.optLong("carId"),
+                    name = o.optString("name"),
+                    intervalKm = o.optInt("intervalKm"),
+                    intervalMonths = o.optInt("intervalMonths"),
+                    lastMileage = o.optInt("lastMileage"),
+                    lastDate = o.optLong("lastDate"),
+                    hasLastExecution = hasExecution,
+                    skipped = o.optBoolean("skipped"),
+                    preventive = o.optBoolean("preventive")
+                )
+            )
+        }
+    }
+
+    private fun saveWorks() {
+        val a = JSONArray()
+        works.forEach { w ->
+            a.put(JSONObject().apply {
+                put("id", w.id)
+                put("carId", w.carId)
+                put("name", w.name)
+                put("intervalKm", w.intervalKm)
+                put("intervalMonths", w.intervalMonths)
+                put("lastMileage", w.lastMileage)
+                put("lastDate", w.lastDate)
+                put("hasLastExecution", w.hasLastExecution)
+                put("skipped", w.skipped)
+                put("preventive", w.preventive)
+            })
+        }
+        prefs.edit().putString("maintenance_works", a.toString()).apply()
+    }
+
+    private fun showSection(section: String) {
+        val page = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(20, 14, 20, 10)
+            setPadding(dp(12), dp(8), dp(12), dp(4))
+            fitsSystemWindows = true
         }
 
-        header.addView(
-            label(
-                "АВТОМОБИЛЬ • ТО",
-                12,
-                MUTED,
-                true
-            )
-        )
+        page.addView(TextView(this).apply {
+            text = section
+            textSize = 23f
+            setTextColor(Color.BLACK)
+            setPadding(dp(4), dp(4), dp(4), dp(8))
+        })
 
-        header.addView(
-            label(
-                "Мои автомобили",
-                25,
-                TEXT,
-                true
-            )
-        )
-
-        root.addView(header)
-
-        content = LinearLayout(this).apply {
+        val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(16, 8, 16, 16)
+        }
+
+        when (section) {
+            "Главная" -> showHome(content)
+            "Перечень работ" -> showWorkList(content)
+            "Регламент" -> showRegulation(content)
+            "Статистика" -> showStatistics(content)
+            "Ещё" -> showMore(content)
         }
 
         val scroll = ScrollView(this).apply {
@@ -282,2046 +216,620 @@ class MainActivity : Activity() {
             addView(content)
         }
 
-        root.addView(
+        page.addView(
             scroll,
             LinearLayout.LayoutParams(
-                0,
-                0,
-                1f
+                LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f
             )
         )
 
-        navigation = LinearLayout(this).apply {
+        val nav = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
-            setPadding(4, 6, 4, 6)
-            setBackgroundColor(PANEL)
+            gravity = Gravity.CENTER
+            setBackgroundColor(Color.rgb(245, 245, 245))
+            setPadding(0, dp(2), 0, dp(2))
         }
 
-        root.addView(navigation)
-
-        setContentView(root)
-
-        updateNavigation()
-    }
-
-    private fun updateNavigation() {
-
-        navigation.removeAllViews()
-
-        val tabs = listOf(
-            "Главная",
-            "Перечень",
-            "Регламент",
-            "Статистика",
-            "Ещё"
+        val labels = listOf(
+            "Главная", "Перечень\nработ", "Регламент", "Статистика", "Ещё"
         )
 
-        tabs.forEach { tab ->
+        sections.forEachIndexed { index, item ->
+            nav.addView(
+                TextView(this).apply {
+                    text = labels[index]
+                    textSize = 10f
+                    gravity = Gravity.CENTER
+                    setTextColor(if (item == section) green else Color.BLACK)
+                    setPadding(dp(1), dp(6), dp(1), dp(6))
+                    minHeight = dp(48)
+                    isClickable = true
+                    isFocusable = true
 
-            val item = TextView(this).apply {
-
-                text =
-                    if (tab == currentTab) {
-                        "●\n$tab"
-                    } else {
-                        tab
+                    if (item == section) {
+                        setBackgroundColor(Color.rgb(220, 235, 220))
                     }
 
-                gravity = Gravity.CENTER
-                textSize = 10f
-
-                setTextColor(
-                    if (tab == currentTab) {
-                        GREEN
-                    } else {
-                        MUTED
-                    }
-                )
-
-                setPadding(2, 8, 2, 8)
-
-                setOnClickListener {
-
-                    currentTab = tab
-                    updateNavigation()
-
-                    when (tab) {
-
-                        "Главная" -> showHome()
-
-                        "Перечень" -> showWorks()
-
-                        "Регламент" -> showRegulations()
-
-                        "Статистика" -> showStatistics()
-
-                        "Ещё" -> showMore()
-                    }
-                }
-            }
-
-            navigation.addView(
-                item,
-                LinearLayout.LayoutParams(
-                    0,
-                    -2,
-                    1f
-                )
+                    setOnClickListener { showSection(item) }
+                },
+                LinearLayout.LayoutParams(0, -2, 1f)
             )
         }
-    }
 
-    private fun render(
-        title: String,
-        block: LinearLayout.() -> Unit
-    ) {
-
-        content.removeAllViews()
-
-        content.addView(
-            label(
-                title,
-                23,
-                TEXT,
-                true
-            )
-        )
-
-        content.addView(space(12))
-
-        content.block()
-    }
-
-    private fun label(
-        value: String,
-        size: Int = 15,
-        color: Int = TEXT,
-        bold: Boolean = false
-    ): TextView {
-
-        return TextView(this).apply {
-
-            text = value
-            textSize = size.toFloat()
-            setTextColor(color)
-
-            if (bold) {
-                setTypeface(null, Typeface.BOLD)
-            }
-
-            setPadding(0, 3, 0, 3)
-        }
-    }
-
-    private fun space(height: Int): View =
-        View(this).apply {
-            layoutParams =
-                LinearLayout.LayoutParams(
-                    1,
-                    height
-                )
-        }
-
-    private fun card(): LinearLayout =
-        LinearLayout(this).apply {
-
-            orientation = LinearLayout.VERTICAL
-
-            setPadding(
-                16,
-                14,
-                16,
-                14
-            )
-
-            background =
-                GradientDrawable().apply {
-                    setColor(PANEL)
-                    cornerRadius = 20f
-                }
-        }
-
-    private fun addCard(
-        parent: LinearLayout,
-        panel: LinearLayout
-    ) {
-
-        parent.addView(
-            panel,
+        page.addView(
+            nav,
             LinearLayout.LayoutParams(
-                -1,
-                -2
-            ).apply {
-                bottomMargin = 12
-            }
-        )
-    }
-
-    private fun button(
-        title: String,
-        action: () -> Unit
-    ): Button =
-        Button(this).apply {
-
-            text = title
-
-            setOnClickListener {
-                action()
-            }
-        }
-
-    private fun addButton(
-        parent: LinearLayout,
-        title: String,
-        action: () -> Unit
-    ) {
-
-        parent.addView(
-            button(title, action),
-            LinearLayout.LayoutParams(
-                -1,
-                -2
-            ).apply {
-                bottomMargin = 5
-            }
-        )
-    }
-
-    private fun editText(
-        hintText: String,
-        value: String = "",
-        number: Boolean = false,
-        multiline: Boolean = false
-    ): EditText {
-
-        return EditText(this).apply {
-
-            hint = hintText
-            setText(value)
-
-            setTextColor(TEXT)
-            setHintTextColor(MUTED)
-
-            textSize = 15f
-
-            if (number) {
-                inputType =
-                    android.text.InputType.TYPE_CLASS_NUMBER
-            }
-
-            if (multiline) {
-
-                minLines = 2
-                maxLines = 4
-                gravity = Gravity.TOP
-
-            } else {
-
-                setSingleLine(true)
-            }
-        }
-    }
-
-    // =========================================================
-    // ГЛАВНАЯ
-    // =========================================================
-
-    private fun showHome() {
-
-        render("Главная") {
-
-            val selected = car()
-
-            if (selected == null) {
-
-                val welcome = card()
-
-                welcome.addView(
-                    label(
-                        "Добро пожаловать!",
-                        21,
-                        TEXT,
-                        true
-                    )
-                )
-
-                welcome.addView(
-                    label(
-                        "Добавьте автомобиль, чтобы начать вести учёт ТО.",
-                        14,
-                        MUTED
-                    )
-                )
-
-                addCard(this, welcome)
-
-                addButton(
-                    this,
-                    "＋ Добавить автомобиль"
-                ) {
-                    editCar(null)
-                }
-
-                return@render
-            }
-
-            val vehicle = card()
-
-            vehicle.addView(
-                label(
-                    "${selected.brand} ${selected.model}",
-                    22,
-                    TEXT,
-                    true
-                )
-            )
-
-            vehicle.addView(
-                label(
-                    "${selected.year} год • ${
-                        selected.engine.ifBlank {
-                            "Двигатель не указан"
-                        }
-                    }",
-                    14,
-                    MUTED
-                )
-            )
-
-            vehicle.addView(space(8))
-
-            vehicle.addView(
-                label(
-                    "Пробег: ${selected.mileage} км",
-                    18,
-                    GREEN,
-                    true
-                )
-            )
-
-            if (selected.vin.isNotBlank()) {
-
-                vehicle.addView(
-                    label(
-                        "VIN: ${selected.vin}",
-                        13,
-                        MUTED
-                    )
-                )
-            }
-
-            vehicle.addView(
-                label(
-                    "Топливо: ${
-                        selected.fuel.ifBlank {
-                            "не указано"
-                        }
-                    }" +
-                        if (selected.hasLpg) {
-                            " • ГБО"
-                        } else {
-                            ""
-                        },
-                    13,
-                    MUTED
-                )
-            )
-
-            if (selected.notes.isNotBlank()) {
-
-                vehicle.addView(
-                    label(
-                        selected.notes,
-                        13,
-                        MUTED
-                    )
-                )
-            }
-
-            addCard(this, vehicle)
-
-            val list = carWorks()
-
-            val overdue =
-                list.count {
-                    status(it) == "Выполнить"
-                }
-
-            val normal =
-                list.count {
-                    status(it) == "В норме"
-                }
-
-            val skipped =
-                list.count {
-                    status(it) == "Пропущено"
-                }
-
-            val preventive =
-                list.count {
-                    status(it) == "Профилактика"
-                }
-
-            val summary = card()
-
-            summary.addView(
-                label(
-                    "Обслуживание",
-                    19,
-                    TEXT,
-                    true
-                )
-            )
-
-            summary.addView(
-                label(
-                    "Всего работ: ${list.size}",
-                    14,
-                    MUTED
-                )
-            )
-
-            summary.addView(space(8))
-
-            addStatus(
-                summary,
-                "Требуют выполнения",
-                overdue,
-                RED
-            )
-
-            addStatus(
-                summary,
-                "Срок не наступил",
-                normal,
-                GREEN
-            )
-
-            addStatus(
-                summary,
-                "Пропущено",
-                skipped,
-                PURPLE
-            )
-
-            addStatus(
-                summary,
-                "Профилактика",
-                preventive,
-                YELLOW
-            )
-
-            addCard(this, summary)
-
-            addButton(
-                this,
-                "＋ Добавить работу"
-            ) {
-                editWork(null)
-            }
-
-            addButton(
-                this,
-                "Открыть перечень работ"
-            ) {
-
-                currentTab = "Перечень"
-                updateNavigation()
-                showWorks()
-            }
-
-            addButton(
-                this,
-                "Изменить автомобиль"
-            ) {
-                editCar(selected)
-            }
-
-            addButton(
-                this,
-                "Выбрать автомобиль"
-            ) {
-                chooseCar()
-            }
-        }
-    }
-
-    private fun addStatus(
-        parent: LinearLayout,
-        title: String,
-        count: Int,
-        color: Int
-    ) {
-
-        val row =
-            LinearLayout(this).apply {
-
-                orientation =
-                    LinearLayout.HORIZONTAL
-
-                gravity =
-                    Gravity.CENTER_VERTICAL
-
-                setPadding(
-                    12,
-                    9,
-                    12,
-                    9
-                )
-
-                background =
-                    GradientDrawable().apply {
-                        setColor(
-                            0xFF303641.toInt()
-                        )
-                        cornerRadius = 12f
-                    }
-            }
-
-        row.addView(
-            label(
-                title,
-                14,
-                TEXT
-            ),
-            LinearLayout.LayoutParams(
-                0,
-                -2,
-                1f
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
             )
         )
 
-        row.addView(
-            label(
-                count.toString(),
-                19,
-                color,
-                true
-            )
-        )
-
-        parent.addView(
-            row,
-            LinearLayout.LayoutParams(
-                -1,
-                -2
-            ).apply {
-                bottomMargin = 6
-            }
-        )
+        setContentView(page)
     }
 
-    // =========================================================
-    // СТАТУСЫ
-    // =========================================================
+    private fun dp(value: Int): Int =
+        (value * resources.displayMetrics.density).toInt()
 
-    private fun status(
-        work: MaintenanceWork
-    ): String {
+    private fun selectedCar(): Car? =
+        cars.firstOrNull { it.id == selectedCarId }
 
-        if (work.skipped) {
-            return "Пропущено"
-        }
+    private fun showHome(root: LinearLayout) {
+        val car = selectedCar()
 
-        if (work.preventive) {
-            return "Профилактика"
-        }
-
-        if (!work.hasLastExecution) {
-            return "Выполнить"
-        }
-
-        val currentMileage =
-            car()?.mileage ?: 0
-
-        if (
-            work.intervalKm > 0 &&
-            currentMileage >=
-            work.lastMileage + work.intervalKm
-        ) {
-            return "Выполнить"
-        }
-
-        if (
-            work.intervalMonths > 0 &&
-            work.lastDate.isNotBlank()
-        ) {
-
-            try {
-
-                val last =
-                    dateFormat.parse(
-                        work.lastDate
-                    )
-
-                if (last != null) {
-
-                    val calendar =
-                        Calendar.getInstance()
-
-                    calendar.time = last
-
-                    calendar.add(
-                        Calendar.MONTH,
-                        work.intervalMonths
-                    )
-
-                    if (
-                        Date().after(
-                            calendar.time
-                        )
-                    ) {
-                        return "Выполнить"
-                    }
-                }
-
-            } catch (_: Exception) {
+        if (car == null) {
+            root.addView(label("Автомобиль пока не добавлен."))
+            root.addView(actionButton("Добавить автомобиль") {
+                showCarDialog(null)
+            })
+            if (cars.isNotEmpty()) {
+                root.addView(actionButton("Выбрать автомобиль") {
+                    selectCarDialog()
+                })
             }
-        }
-
-        return "В норме"
-    }
-
-    private fun statusColor(
-        work: MaintenanceWork
-    ): Int {
-
-        return when (status(work)) {
-
-            "Выполнить" -> RED
-
-            "В норме" -> GREEN
-
-            "Пропущено" -> PURPLE
-
-            else -> YELLOW
-        }
-    }
-
-    // =========================================================
-    // ПЕРЕЧЕНЬ РАБОТ
-    // =========================================================
-
-    private fun showWorks() {
-
-        render("Перечень работ") {
-
-            val list = carWorks()
-
-            if (list.isEmpty()) {
-
-                val empty = card()
-
-                empty.addView(
-                    label(
-                        "Работ пока нет",
-                        17,
-                        TEXT,
-                        true
-                    )
-                )
-
-                empty.addView(
-                    label(
-                        "Добавьте работу или выберите её из регламента.",
-                        14,
-                        MUTED
-                    )
-                )
-
-                addCard(this, empty)
-            }
-
-            list.forEach { work ->
-
-                val item = card()
-
-                item.addView(
-                    label(
-                        work.name,
-                        18,
-                        TEXT,
-                        true
-                    )
-                )
-
-                item.addView(
-                    label(
-                        status(work),
-                        14,
-                        statusColor(work),
-                        true
-                    )
-                )
-
-                item.addView(
-                    label(
-                        "Интервал: " +
-                            if (work.intervalKm > 0) {
-                                "${work.intervalKm} км"
-                            } else {
-                                "не задан"
-                            } +
-                            " • " +
-                            if (work.intervalMonths > 0) {
-                                "${work.intervalMonths} мес."
-                            } else {
-                                "не задан"
-                            },
-                        13,
-                        MUTED
-                    )
-                )
-
-                if (work.hasLastExecution) {
-
-                    item.addView(
-                        label(
-                            "Последнее выполнение: ${
-                                work.lastDate.ifBlank {
-                                    "не указана дата"
-                                }
-                            }",
-                            13,
-                            MUTED
-                        )
-                    )
-
-                    item.addView(
-                        label(
-                            "Пробег: ${work.lastMileage} км",
-                            13,
-                            MUTED
-                        )
-                    )
-                }
-
-                if (
-                    work.oilType.isNotBlank() ||
-                    work.oilName.isNotBlank()
-                ) {
-
-                    item.addView(
-                        label(
-                            "Тип масла: ${
-                                work.oilType.ifBlank {
-                                    "не указан"
-                                }
-                            }",
-                            13,
-                            BLUE
-                        )
-                    )
-
-                    item.addView(
-                        label(
-                            "Название масла: ${
-                                work.oilName.ifBlank {
-                                    "не указано"
-                                }
-                            }",
-                            13,
-                            BLUE
-                        )
-                    )
-                }
-
-                addButton(
-                    item,
-                    "Отметить выполнение"
-                ) {
-                    recordExecution(work)
-                }
-
-                addButton(
-                    item,
-                    "Изменить работу"
-                ) {
-                    editWork(work)
-                }
-
-                addButton(
-                    item,
-                    "Отметить пропущенной"
-                ) {
-
-                    work.skipped = true
-                    work.preventive = false
-
-                    saveData()
-                    showWorks()
-                }
-
-                addButton(
-                    item,
-                    "Снять отметку «пропущено»"
-                ) {
-
-                    work.skipped = false
-
-                    saveData()
-                    showWorks()
-                }
-
-                addButton(
-                    item,
-                    "Удалить работу"
-                ) {
-
-                    AlertDialog.Builder(
-                        this@MainActivity
-                    )
-                        .setTitle(
-                            "Удалить работу?"
-                        )
-                        .setMessage(work.name)
-                        .setNegativeButton(
-                            "Отмена",
-                            null
-                        )
-                        .setPositiveButton(
-                            "Удалить"
-                        ) { _, _ ->
-
-                            works.remove(work)
-
-                            saveData()
-                            showWorks()
-                        }
-                        .show()
-                }
-
-                addCard(this, item)
-            }
-
-            addButton(
-                this,
-                "＋ Добавить работу"
-            ) {
-                editWork(null)
-            }
-        }
-    }
-
-    // =========================================================
-    // ВЫПОЛНЕНИЕ РАБОТЫ
-    // =========================================================
-
-    private fun recordExecution(
-        work: MaintenanceWork
-    ) {
-
-        val mileageInput =
-            editText(
-                "Пробег при выполнении, км",
-                (car()?.mileage ?: 0).toString(),
-                number = true
-            )
-
-        val dateInput =
-            editText(
-                "Дата выполнения",
-                today()
-            )
-
-        val form =
-            LinearLayout(this).apply {
-
-                orientation =
-                    LinearLayout.VERTICAL
-
-                setPadding(
-                    24,
-                    8,
-                    24,
-                    0
-                )
-
-                addView(mileageInput)
-                addView(dateInput)
-            }
-
-        dateInput.setOnClickListener {
-
-            val calendar =
-                Calendar.getInstance()
-
-            DatePickerDialog(
-                this,
-                { _, year, month, day ->
-
-                    dateInput.setText(
-                        String.format(
-                            Locale.getDefault(),
-                            "%02d.%02d.%04d",
-                            day,
-                            month + 1,
-                            year
-                        )
-                    )
-                },
-                calendar.get(
-                    Calendar.YEAR
-                ),
-                calendar.get(
-                    Calendar.MONTH
-                ),
-                calendar.get(
-                    Calendar.DAY_OF_MONTH
-                )
-            ).show()
-        }
-
-        val dialog =
-            AlertDialog.Builder(this)
-                .setTitle(
-                    "Выполнение работы"
-                )
-                .setView(form)
-                .setNegativeButton(
-                    "Отмена",
-                    null
-                )
-                .setPositiveButton(
-                    "Сохранить",
-                    null
-                )
-                .create()
-
-        dialog.setOnShowListener {
-
-            dialog.getButton(
-                AlertDialog.BUTTON_POSITIVE
-            ).setOnClickListener {
-
-                val mileage =
-                    mileageInput.text
-                        .toString()
-                        .toIntOrNull()
-
-                val date =
-                    dateInput.text
-                        .toString()
-                        .trim()
-
-                if (
-                    mileage == null ||
-                    mileage < 0
-                ) {
-
-                    Toast.makeText(
-                        this,
-                        "Укажите корректный пробег",
-                        Toast.LENGTH_LONG
-                    ).show()
-
-                    return@setOnClickListener
-                }
-
-                if (
-                    dateFormat.parseOrNull(date) == null
-                ) {
-
-                    Toast.makeText(
-                        this,
-                        "Укажите дату в формате дд.мм.гггг",
-                        Toast.LENGTH_LONG
-                    ).show()
-
-                    return@setOnClickListener
-                }
-
-                work.lastMileage = mileage
-                work.lastDate = date
-                work.hasLastExecution = true
-                work.skipped = false
-                work.preventive = false
-
-                car()?.let {
-
-                    if (mileage > it.mileage) {
-                        it.mileage = mileage
-                    }
-                }
-
-                saveData()
-
-                dialog.dismiss()
-
-                showWorks()
-            }
-        }
-
-        dialog.show()
-    }
-
-    private fun SimpleDateFormat.parseOrNull(
-        value: String
-    ): Date? {
-
-        return try {
-
-            isLenient = false
-
-            parse(value)
-
-        } catch (_: Exception) {
-
-            null
-        }
-    }
-
-    // =========================================================
-    // РЕГЛАМЕНТ
-    // =========================================================
-
-    private fun showRegulations() {
-
-        render("Регламент ТО") {
-
-            val info = card()
-
-            info.addView(
-                label(
-                    "Регламент выбранного автомобиля",
-                    17,
-                    TEXT,
-                    true
-                )
-            )
-
-            info.addView(
-                label(
-                    "Добавляйте типовые работы и настраивайте интервалы отдельно для автомобиля.",
-                    14,
-                    MUTED
-                )
-            )
-
-            addCard(this, info)
-
-            val templates =
-                listOf(
-                    Triple(
-                        "Замена моторного масла",
-                        10000,
-                        12
-                    ),
-                    Triple(
-                        "Замена масляного фильтра",
-                        10000,
-                        12
-                    ),
-                    Triple(
-                        "Замена воздушного фильтра",
-                        15000,
-                        12
-                    ),
-                    Triple(
-                        "Замена салонного фильтра",
-                        15000,
-                        12
-                    ),
-                    Triple(
-                        "Проверка тормозной системы",
-                        10000,
-                        12
-                    ),
-                    Triple(
-                        "Замена тормозной жидкости",
-                        0,
-                        24
-                    ),
-                    Triple(
-                        "Проверка охлаждающей жидкости",
-                        10000,
-                        12
-                    ),
-                    Triple(
-                        "Проверка свечей зажигания",
-                        30000,
-                        24
-                    ),
-                    Triple(
-                        "Обслуживание газового оборудования (ГБО)",
-                        10000,
-                        12
-                    )
-                )
-
-            templates.forEach { template ->
-
-                val item = card()
-
-                item.addView(
-                    label(
-                        template.first,
-                        16,
-                        TEXT,
-                        true
-                    )
-                )
-
-                item.addView(
-                    label(
-                        "Интервал: " +
-                            if (template.second > 0) {
-                                "${template.second} км"
-                            } else {
-                                "по сроку"
-                            } +
-                            " / ${template.third} мес.",
-                        13,
-                        MUTED
-                    )
-                )
-
-                addButton(
-                    item,
-                    "Добавить в регламент"
-                ) {
-
-                    if (car() == null) {
-
-                        Toast.makeText(
-                            this@MainActivity,
-                            "Сначала добавьте автомобиль",
-                            Toast.LENGTH_LONG
-                        ).show()
-
-                    } else if (
-                        carWorks().any {
-                            it.name == template.first
-                        }
-                    ) {
-
-                        Toast.makeText(
-                            this@MainActivity,
-                            "Такая работа уже есть",
-                            Toast.LENGTH_LONG
-                        ).show()
-
-                    } else {
-
-                        works.add(
-                            MaintenanceWork(
-                                carId = selectedCarId,
-                                name = template.first,
-                                intervalKm =
-                                    template.second,
-                                intervalMonths =
-                                    template.third
-                            )
-                        )
-
-                        saveData()
-
-                        Toast.makeText(
-                            this@MainActivity,
-                            "Работа добавлена",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                }
-
-                addCard(this, item)
-            }
-
-            addButton(
-                this,
-                "＋ Создать свою работу"
-            ) {
-                editWork(null)
-            }
-        }
-    }
-
-    // =========================================================
-    // СТАТИСТИКА
-    // =========================================================
-
-    private fun showStatistics() {
-
-        render("Статистика") {
-
-            val list = carWorks()
-
-            val summary = card()
-
-            summary.addView(
-                label(
-                    "Сводка по автомобилю",
-                    18,
-                    TEXT,
-                    true
-                )
-            )
-
-            addStatus(
-                summary,
-                "Всего работ",
-                list.size,
-                BLUE
-            )
-
-            addStatus(
-                summary,
-                "Требуют выполнения",
-                list.count {
-                    status(it) == "Выполнить"
-                },
-                RED
-            )
-
-            addStatus(
-                summary,
-                "Срок не наступил",
-                list.count {
-                    status(it) == "В норме"
-                },
-                GREEN
-            )
-
-            addStatus(
-                summary,
-                "Пропущено",
-                list.count {
-                    status(it) == "Пропущено"
-                },
-                PURPLE
-            )
-
-            addStatus(
-                summary,
-                "Профилактика",
-                list.count {
-                    status(it) == "Профилактика"
-                },
-                YELLOW
-            )
-
-            addCard(this, summary)
-
-            val history = card()
-
-            history.addView(
-                label(
-                    "Последние записи",
-                    18,
-                    TEXT,
-                    true
-                )
-            )
-
-            val executed =
-                list
-                    .filter {
-                        it.hasLastExecution
-                    }
-                    .sortedByDescending {
-                        it.lastDate
-                    }
-
-            if (executed.isEmpty()) {
-
-                history.addView(
-                    label(
-                        "Записей о выполнении пока нет.",
-                        14,
-                        MUTED
-                    )
-                )
-
-            } else {
-
-                executed.forEach { work ->
-
-                    history.addView(
-                        label(
-                            "${work.lastDate} • ${work.name}",
-                            14,
-                            TEXT
-                        )
-                    )
-
-                    history.addView(
-                        label(
-                            "Пробег: ${work.lastMileage} км",
-                            13,
-                            MUTED
-                        )
-                    )
-
-                    history.addView(space(5))
-                }
-            }
-
-            addCard(this, history)
-
-            addButton(
-                this,
-                "Сохранить статистику в TXT"
-            ) {
-                exportStatistics()
-            }
-        }
-    }
-
-    private fun exportStatistics() {
-
-        try {
-
-            val selected = car()
-
-            val lines =
-                mutableListOf<String>()
-
-            lines.add(
-                "ОТЧЁТ ПО ТЕХНИЧЕСКОМУ ОБСЛУЖИВАНИЮ"
-            )
-
-            lines.add(
-                "Дата отчёта: ${today()}"
-            )
-
-            lines.add("")
-
-            if (selected != null) {
-
-                lines.add(
-                    "Автомобиль: ${selected.brand} ${selected.model}"
-                )
-
-                lines.add(
-                    "Год: ${selected.year}"
-                )
-
-                lines.add(
-                    "VIN: ${selected.vin}"
-                )
-
-                lines.add(
-                    "Пробег: ${selected.mileage} км"
-                )
-
-                lines.add("")
-
-                lines.add(
-                    "РАБОТЫ:"
-                )
-
-                lines.add("")
-
-                carWorks().forEach { work ->
-
-                    lines.add(
-                        "Работа: ${work.name}"
-                    )
-
-                    lines.add(
-                        "Статус: ${status(work)}"
-                    )
-
-                    lines.add(
-                        "Интервал: " +
-                            if (work.intervalKm > 0) {
-                                "${work.intervalKm} км"
-                            } else {
-                                "не задан"
-                            } +
-                            " / " +
-                            if (work.intervalMonths > 0) {
-                                "${work.intervalMonths} мес."
-                            } else {
-                                "не задан"
-                            }
-                    )
-
-                    if (work.hasLastExecution) {
-
-                        lines.add(
-                            "Последнее выполнение: ${work.lastDate}"
-                        )
-
-                        lines.add(
-                            "Пробег выполнения: ${work.lastMileage} км"
-                        )
-                    }
-
-                    if (work.oilType.isNotBlank()) {
-
-                        lines.add(
-                            "Тип масла: ${work.oilType}"
-                        )
-                    }
-
-                    if (work.oilName.isNotBlank()) {
-
-                        lines.add(
-                            "Название масла: ${work.oilName}"
-                        )
-                    }
-
-                    lines.add("")
-                }
-
-            } else {
-
-                lines.add(
-                    "Автомобиль не выбран."
-                )
-            }
-
-            val fileName =
-                "ТО_${selected?.brand ?: "автомобиль"}_" +
-                    "${selected?.model ?: ""}_" +
-                    "${today().replace(".", "-")}.txt"
-
-            val safeFileName =
-                fileName.replace(
-                    Regex("[\\\\/:*?\"<>|]"),
-                    "_"
-                )
-
-            val file =
-                File(
-                    getExternalFilesDir(null),
-                    safeFileName
-                )
-
-            file.writeText(
-                lines.joinToString("\n"),
-                Charsets.UTF_8
-            )
-
-            Toast.makeText(
-                this,
-                "Статистика сохранена:\n${file.name}",
-                Toast.LENGTH_LONG
-            ).show()
-
-        } catch (e: Exception) {
-
-            Toast.makeText(
-                this,
-                "Ошибка сохранения: ${e.message}",
-                Toast.LENGTH_LONG
-            ).show()
-        }
-    }
-
-    // =========================================================
-    // ЕЩЁ
-    // =========================================================
-
-    private fun showMore() {
-
-        render("Ещё") {
-
-            addButton(
-                this,
-                "＋ Добавить автомобиль"
-            ) {
-                editCar(null)
-            }
-
-            addButton(
-                this,
-                "Выбрать автомобиль"
-            ) {
-                chooseCar()
-            }
-
-            cars.forEach { selected ->
-
-                val item = card()
-
-                item.addView(
-                    label(
-                        "${selected.brand} ${selected.model}",
-                        17,
-                        TEXT,
-                        true
-                    )
-                )
-
-                item.addView(
-                    label(
-                        "${selected.year} • ${selected.mileage} км",
-                        13,
-                        MUTED
-                    )
-                )
-
-                addButton(
-                    item,
-                    "Изменить"
-                ) {
-                    editCar(selected)
-                }
-
-                addButton(
-                    item,
-                    "Выбрать этот автомобиль"
-                ) {
-
-                    selectedCarId =
-                        selected.id
-
-                    saveData()
-
-                    currentTab = "Главная"
-
-                    updateNavigation()
-                    showHome()
-                }
-
-                addButton(
-                    item,
-                    "Удалить автомобиль"
-                ) {
-
-                    AlertDialog.Builder(
-                        this@MainActivity
-                    )
-                        .setTitle(
-                            "Удалить автомобиль?"
-                        )
-                        .setMessage(
-                            "Связанные с ним работы также будут удалены."
-                        )
-                        .setNegativeButton(
-                            "Отмена",
-                            null
-                        )
-                        .setPositiveButton(
-                            "Удалить"
-                        ) { _, _ ->
-
-                            cars.remove(selected)
-
-                            works.removeAll {
-                                it.carId == selected.id
-                            }
-
-                            if (
-                                selectedCarId ==
-                                selected.id
-                            ) {
-
-                                selectedCarId =
-                                    cars.firstOrNull()?.id
-                                        ?: ""
-                            }
-
-                            saveData()
-
-                            showMore()
-                        }
-                        .show()
-                }
-
-                addCard(this, item)
-            }
-        }
-    }
-
-    // =========================================================
-    // ВЫБОР АВТОМОБИЛЯ
-    // =========================================================
-
-    private fun chooseCar() {
-
-        if (cars.isEmpty()) {
-
-            editCar(null)
             return
         }
 
+        root.addView(label(
+            "${car.brand} ${car.model}\n" +
+            "Год: ${car.year}\n" +
+            "Пробег: ${car.mileage} км\n" +
+            "VIN: ${car.vin.ifBlank { "не указан" }}\n" +
+            "Двигатель: ${car.engine}\n" +
+            "Топливо: ${car.fuel}" +
+            if (car.hasLpg) "\nУстановлено ГБО" else ""
+        ))
+
+        val carWorks = works.filter { it.carId == car.id }
+        val overdue = carWorks.count {
+            getWorkStatus(it, car) == "Необходимо выполнить"
+        }
+
+        root.addView(label("Регламентных работ: ${carWorks.size}"))
+        root.addView(label("Требуют выполнения: $overdue"))
+
+        root.addView(actionButton("Выбрать автомобиль") {
+            selectCarDialog()
+        })
+        root.addView(actionButton("Изменить автомобиль") {
+            showCarDialog(car)
+        })
+        root.addView(actionButton("Добавить автомобиль") {
+            showCarDialog(null)
+        })
+        root.addView(actionButton("Добавить регламентную работу") {
+            showWorkDialog(null)
+        })
+    }
+
+    private fun selectCarDialog() {
+        if (cars.isEmpty()) return
+
+        val names = cars.map {
+            "${it.brand} ${it.model} (${it.year})"
+        }.toTypedArray()
+
         AlertDialog.Builder(this)
-            .setTitle(
-                "Выбрать автомобиль"
-            )
-            .setItems(
-                cars.map {
-                    "${it.brand} ${it.model} (${it.year})"
-                }.toTypedArray()
-            ) { _, which ->
-
-                selectedCarId =
-                    cars[which].id
-
-                saveData()
-
-                currentTab = "Главная"
-
-                updateNavigation()
-                showHome()
+            .setTitle("Выберите автомобиль")
+            .setItems(names) { _, index ->
+                selectedCarId = cars[index].id
+                saveSelectedCar()
+                showSection("Главная")
             }
-            .setNegativeButton(
-                "Отмена",
-                null
-            )
+            .setNegativeButton("Отмена", null)
             .show()
     }
 
-    // =========================================================
-    // АВТОМОБИЛЬ
-    // =========================================================
-
-    private fun editCar(
-        existing: Car?
-    ) {
-
-        val isNew =
-            existing == null
-
-        val target =
-            existing ?: Car()
-
-        val brand =
-            editText(
-                "Марка",
-                target.brand
-            )
-
-        val model =
-            editText(
-                "Модель",
-                target.model
-            )
-
-        val year =
-            editText(
-                "Год выпуска",
-                if (target.year == 0) {
-                    ""
-                } else {
-                    target.year.toString()
-                },
-                number = true
-            )
-
-        val vin =
-            editText(
-                "VIN-код автомобиля",
-                target.vin
-            )
-
-        val mileage =
-            editText(
-                "Текущий пробег, км",
-                target.mileage.toString(),
-                number = true
-            )
-
-        val engine =
-            editText(
-                "Двигатель / объём",
-                target.engine
-            )
-
-        val fuel =
-            editText(
-                "Топливо",
-                target.fuel
-            )
-
-        val notes =
-            editText(
-                "Примечания",
-                target.notes,
-                multiline = true
-            )
-
-        val lpg =
-            CheckBox(this).apply {
-
-                text =
-                    "Установлено газовое оборудование (ГБО)"
-
-                setTextColor(TEXT)
-
-                isChecked =
-                    target.hasLpg
-            }
-
-        val form =
-            LinearLayout(this).apply {
-
-                orientation =
-                    LinearLayout.VERTICAL
-
-                setPadding(
-                    24,
-                    8,
-                    24,
-                    0
-                )
-
-                addView(brand)
-                addView(model)
-                addView(year)
-                addView(vin)
-                addView(mileage)
-                addView(engine)
-                addView(fuel)
-                addView(lpg)
-                addView(notes)
-            }
-
-        val scroll =
-            ScrollView(this).apply {
-                addView(form)
-            }
-
-        val dialog =
-            AlertDialog.Builder(this)
-                .setTitle(
-                    if (isNew) {
-                        "Новый автомобиль"
-                    } else {
-                        "Изменить автомобиль"
-                    }
-                )
-                .setView(scroll)
-                .setNegativeButton(
-                    "Отмена",
-                    null
-                )
-                .setPositiveButton(
-                    "Сохранить",
-                    null
-                )
-                .create()
-
-        dialog.setOnShowListener {
-
-            dialog.getButton(
-                AlertDialog.BUTTON_POSITIVE
-            ).setOnClickListener {
-
-                val brandValue =
-                    brand.text
-                        .toString()
-                        .trim()
-
-                val modelValue =
-                    model.text
-                        .toString()
-                        .trim()
-
-                val mileageValue =
-                    mileage.text
-                        .toString()
-                        .toIntOrNull()
-
-                val yearValue =
-                    year.text
-                        .toString()
-                        .toIntOrNull()
-
-                if (
-                    brandValue.isBlank() ||
-                    modelValue.isBlank()
-                ) {
-
-                    Toast.makeText(
-                        this,
-                        "Укажите марку и модель",
-                        Toast.LENGTH_LONG
-                    ).show()
-
-                    return@setOnClickListener
-                }
-
-                if (
-                    mileageValue == null ||
-                    mileageValue < 0
-                ) {
-
-                    Toast.makeText(
-                        this,
-                        "Проверьте пробег",
-                        Toast.LENGTH_LONG
-                    ).show()
-
-                    return@setOnClickListener
-                }
-
-                target.brand =
-                    brandValue
-
-                target.model =
-                    modelValue
-
-                target.year =
-                    yearValue ?: 0
-
-                target.vin =
-                    vin.text
-                        .toString()
-                        .trim()
-
-                target.mileage =
-                    mileageValue
-
-                target.engine =
-                    engine.text
-                        .toString()
-                        .trim()
-
-                target.fuel =
-                    fuel.text
-                        .toString()
-                        .trim()
-
-                target.hasLpg =
-                    lpg.isChecked
-
-                target.notes =
-                    notes.text
-                        .toString()
-                        .trim()
-
-                if (isNew) {
-
-                    cars.add(target)
-
-                    selectedCarId =
-                        target.id
-                }
-
-                saveData()
-
-                dialog.dismiss()
-
-                showHome()
-            }
+    private fun showCarDialog(existing: Car?) {
+        val form = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(32), dp(8), dp(32), dp(8))
         }
 
-        dialog.show()
+        fun field(
+            hintText: String,
+            value: String = "",
+            numeric: Boolean = false
+        ) = EditText(this).apply {
+            hint = hintText
+            setText(value)
+            if (numeric) inputType = InputType.TYPE_CLASS_NUMBER
+        }
+
+        val brand = field("Марка", existing?.brand ?: "")
+        val model = field("Модель", existing?.model ?: "")
+        val year = field("Год выпуска", existing?.year ?: "", true)
+        val vin = field("VIN-код автомобиля", existing?.vin ?: "")
+        val mileage = field("Текущий пробег, км", existing?.mileage ?: "", true)
+        val engine = field("Двигатель", existing?.engine ?: "")
+        val fuel = field("Топливо", existing?.fuel ?: "Бензин")
+        val lpg = CheckBox(this).apply {
+            text = "Установлено ГБО"
+            isChecked = existing?.hasLpg ?: false
+        }
+        val notes = field("Примечания", existing?.notes ?: "")
+
+        listOf(brand, model, year, vin, mileage, engine, fuel).forEach {
+            form.addView(it)
+        }
+        form.addView(lpg)
+        form.addView(notes)
+
+        AlertDialog.Builder(this)
+            .setTitle(if (existing == null) "Новый автомобиль" else "Изменить автомобиль")
+            .setView(ScrollView(this).apply { addView(form) })
+            .setPositiveButton("Сохранить") { _, _ ->
+                if (existing == null) {
+                    val car = Car(
+                        id = System.currentTimeMillis(),
+                        brand = brand.text.toString(),
+                        model = model.text.toString(),
+                        year = year.text.toString(),
+                        vin = vin.text.toString(),
+                        mileage = mileage.text.toString(),
+                        engine = engine.text.toString(),
+                        fuel = fuel.text.toString(),
+                        hasLpg = lpg.isChecked,
+                        notes = notes.text.toString()
+                    )
+                    cars.add(car)
+                    selectedCarId = car.id
+                    saveSelectedCar()
+                } else {
+                    existing.brand = brand.text.toString()
+                    existing.model = model.text.toString()
+                    existing.year = year.text.toString()
+                    existing.vin = vin.text.toString()
+                    existing.mileage = mileage.text.toString()
+                    existing.engine = engine.text.toString()
+                    existing.fuel = fuel.text.toString()
+                    existing.hasLpg = lpg.isChecked
+                    existing.notes = notes.text.toString()
+                }
+                saveCars()
+                showSection("Главная")
+            }
+            .setNegativeButton("Отмена", null)
+            .show()
     }
 
-    // =========================================================
-    // РАБОТА
-    // =========================================================
-
-    private fun editWork(
-        existing: MaintenanceWork?
-    ) {
-
-        if (car() == null) {
-
-            Toast.makeText(
-                this,
-                "Сначала добавьте автомобиль",
-                Toast.LENGTH_LONG
-            ).show()
-
-            editCar(null)
-
+    private fun showWorkList(root: LinearLayout) {
+        val car = selectedCar()
+        if (car == null) {
+            root.addView(label("Сначала добавьте автомобиль."))
             return
         }
 
-        val isNew =
-            existing == null
+        val list = works.filter { it.carId == car.id }
+        if (list.isEmpty()) root.addView(label("Работ пока нет."))
 
-        val target =
-            existing ?: MaintenanceWork(
-                carId = selectedCarId
-            )
+        list.forEach { work ->
+            root.addView(actionButton(
+                work.name + "\n" + getWorkStatus(work, car)
+            ) {
+                showWorkActions(work)
+            })
+        }
 
-        val name =
-            editText(
-                "Название работы",
-                target.name
-            )
+        root.addView(actionButton("Добавить работу") {
+            showWorkDialog(null)
+        })
+    }
 
-        val intervalKm =
-            editText(
-                "Интервал в километрах (0 — не задан)",
-                if (target.intervalKm == 0) {
-                    ""
+    private fun showRegulation(root: LinearLayout) {
+        val car = selectedCar()
+        if (car == null) {
+            root.addView(label("Сначала добавьте автомобиль."))
+            return
+        }
+
+        val list = works.filter { it.carId == car.id }
+        if (list.isEmpty()) root.addView(label("Регламент пока пуст."))
+
+        list.forEach { work ->
+            val status = getWorkStatus(work, car)
+            val block = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(12), dp(12), dp(12), dp(12))
+            }
+
+            block.addView(TextView(this).apply {
+                text = work.name
+                textSize = 18f
+                setTextColor(statusColor(work, car))
+            })
+
+            block.addView(label(
+                if (work.hasLastExecution) {
+                    "Последнее выполнение: ${formatDate(work.lastDate)}\n" +
+                    "Пробег выполнения: ${work.lastMileage} км\n$status"
                 } else {
-                    target.intervalKm.toString()
-                },
-                number = true
-            )
+                    "Работа ещё не выполнялась\n$status"
+                }
+            ))
 
-        val intervalMonths =
-            editText(
-                "Интервал в месяцах (0 — не задан)",
-                if (target.intervalMonths == 0) {
-                    ""
-                } else {
-                    target.intervalMonths.toString()
-                },
-                number = true
-            )
+            block.addView(actionButton("Действия") {
+                showWorkActions(work)
+            })
+            root.addView(block)
+            root.addView(label("────────────"))
+        }
 
-        val oilType =
-            editText(
-                "Тип масла",
-                target.oilType
-            )
+        root.addView(actionButton("Добавить работу") {
+            showWorkDialog(null)
+        })
+    }
 
-        val oilName =
-            editText(
-                "Название / марка масла",
-                target.oilName
-            )
+    private fun showWorkActions(work: MaintenanceWork) {
+        val choices = arrayOf(
+            "Выполнить работу",
+            "Пропустить работу",
+            "Редактировать",
+            "Удалить"
+        )
 
-        val preventive =
-            CheckBox(this).apply {
-
-                text =
-                    "Профилактическая работа"
-
-                setTextColor(TEXT)
-
-                isChecked =
-                    target.preventive
-            }
-
-        val form =
-            LinearLayout(this).apply {
-
-                orientation =
-                    LinearLayout.VERTICAL
-
-                setPadding(
-                    24,
-                    8,
-                    24,
-                    0
-                )
-
-                addView(name)
-                addView(intervalKm)
-                addView(intervalMonths)
-                addView(oilType)
-                addView(oilName)
-                addView(preventive)
-            }
-
-        val scroll =
-            ScrollView(this).apply {
-                addView(form)
-            }
-
-        val dialog =
-            AlertDialog.Builder(this)
-                .setTitle(
-                    if (isNew) {
-                        "Новая работа"
-                    } else {
-                        "Изменить работу"
+        AlertDialog.Builder(this)
+            .setTitle(work.name)
+            .setItems(choices) { _, index ->
+                when (index) {
+                    0 -> completeWork(work)
+                    1 -> {
+                        work.skipped = true
+                        saveWorks()
+                        showSection("Регламент")
                     }
-                )
-                .setView(scroll)
-                .setNegativeButton(
-                    "Отмена",
-                    null
-                )
-                .setPositiveButton(
-                    "Сохранить",
-                    null
-                )
-                .create()
-
-        dialog.setOnShowListener {
-
-            dialog.getButton(
-                AlertDialog.BUTTON_POSITIVE
-            ).setOnClickListener {
-
-                val nameValue =
-                    name.text
-                        .toString()
-                        .trim()
-
-                val intervalKmValue =
-                    intervalKm.text
-                        .toString()
-                        .toIntOrNull()
-                        ?: 0
-
-                val intervalMonthsValue =
-                    intervalMonths.text
-                        .toString()
-                        .toIntOrNull()
-                        ?: 0
-
-                if (nameValue.isBlank()) {
-
-                    Toast.makeText(
-                        this,
-                        "Укажите название работы",
-                        Toast.LENGTH_LONG
-                    ).show()
-
-                    return@setOnClickListener
+                    2 -> showWorkDialog(work)
+                    3 -> AlertDialog.Builder(this)
+                        .setTitle("Удалить работу?")
+                        .setMessage(work.name)
+                        .setPositiveButton("Удалить") { _, _ ->
+                            works.remove(work)
+                            saveWorks()
+                            showSection("Регламент")
+                        }
+                        .setNegativeButton("Отмена", null)
+                        .show()
                 }
+            }
+            .setNegativeButton("Отмена", null)
+            .show()
+    }
 
-                if (
-                    intervalKmValue < 0 ||
-                    intervalMonthsValue < 0
-                ) {
+    private fun showWorkDialog(existing: MaintenanceWork?) {
+        val car = selectedCar()
+        if (car == null) {
+            Toast.makeText(this, "Сначала добавьте автомобиль", Toast.LENGTH_SHORT).show()
+            return
+        }
 
-                    Toast.makeText(
-                        this,
-                        "Интервал не может быть отрицательным",
-                        Toast.LENGTH_LONG
-                    ).show()
+        val form = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(24), dp(8), dp(24), dp(8))
+        }
 
-                    return@setOnClickListener
+        val name = EditText(this).apply {
+            hint = "Название работы"
+            setText(existing?.name ?: "")
+        }
+        val km = EditText(this).apply {
+            hint = "Интервал, км (если нужен)"
+            inputType = InputType.TYPE_CLASS_NUMBER
+            setText(if ((existing?.intervalKm ?: 0) > 0) existing!!.intervalKm.toString() else "")
+        }
+        val months = EditText(this).apply {
+            hint = "Интервал, месяцев (если нужен)"
+            inputType = InputType.TYPE_CLASS_NUMBER
+            setText(if ((existing?.intervalMonths ?: 0) > 0) existing!!.intervalMonths.toString() else "")
+        }
+
+        val notDone = CheckBox(this).apply {
+            text = "Работа ещё не выполнялась"
+            isChecked = existing?.hasLastExecution != true
+        }
+
+        val executionMileage = EditText(this).apply {
+            hint = "Пробег при последнем выполнении, км"
+            inputType = InputType.TYPE_CLASS_NUMBER
+            setText(
+                if (existing?.hasLastExecution == true) {
+                    existing.lastMileage.toString()
+                } else {
+                    ""
                 }
+            )
+        }
 
-                target.carId =
-                    selectedCarId
+        var executionDate = when {
+            existing?.hasLastExecution == true && existing.lastDate > 0L ->
+                existing.lastDate
+            else -> System.currentTimeMillis()
+        }
 
-                target.name =
-                    nameValue
-
-                target.intervalKm =
-                    intervalKmValue
-
-                target.intervalMonths =
-                    intervalMonthsValue
-
-                target.oilType =
-                    oilType.text
-                        .toString()
-                        .trim()
-
-                target.oilName =
-                    oilName.text
-                        .toString()
-                        .trim()
-
-                target.preventive =
-                    preventive.isChecked
-
-                if (preventive.isChecked) {
-                    target.skipped = false
+        val dateButton = Button(this).apply {
+            isAllCaps = false
+            text = "Дата выполнения: ${formatDate(executionDate)}"
+            setOnClickListener {
+                showDatePicker(executionDate) { chosen ->
+                    executionDate = chosen
+                    text = "Дата выполнения: ${formatDate(executionDate)}"
                 }
-
-                if (isNew) {
-                    works.add(target)
-                }
-
-                saveData()
-
-                dialog.dismiss()
-
-                currentTab = "Перечень"
-
-                updateNavigation()
-                showWorks()
             }
         }
 
-        dialog.show()
+        val executionFields = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(label("Заполняй эти поля, если работа уже выполнялась."))
+            addView(dateButton)
+            addView(executionMileage)
+        }
+
+        fun updateExecutionFields() {
+            executionFields.visibility =
+                if (notDone.isChecked) android.view.View.GONE
+                else android.view.View.VISIBLE
+        }
+
+        notDone.setOnCheckedChangeListener { _, _ ->
+            updateExecutionFields()
+        }
+        updateExecutionFields()
+
+        form.addView(name)
+        form.addView(km)
+        form.addView(months)
+        form.addView(notDone)
+        form.addView(executionFields)
+
+        AlertDialog.Builder(this)
+            .setTitle(if (existing == null) "Добавить регламентную работу" else "Изменить работу")
+            .setView(ScrollView(this).apply { addView(form) })
+            .setPositiveButton("Сохранить", null)
+            .setNegativeButton("Отмена", null)
+            .create()
+            .also { dialog ->
+                dialog.setOnShowListener {
+                    dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                        val kmValue = km.text.toString().toIntOrNull() ?: 0
+                        val monthValue = months.text.toString().toIntOrNull() ?: 0
+                        val workName = name.text.toString().trim()
+                        val hasExecution = !notDone.isChecked
+
+                        if (workName.isBlank()) {
+                            name.error = "Укажи название работы"
+                            return@setOnClickListener
+                        }
+
+                        if (hasExecution &&
+                            executionMileage.text.toString().toIntOrNull() == null
+                        ) {
+                            executionMileage.error = "Укажи пробег"
+                            return@setOnClickListener
+                        }
+
+                        val actualMileage =
+                            executionMileage.text.toString().toIntOrNull() ?: 0
+
+                        if (existing == null) {
+                            works.add(
+                                MaintenanceWork(
+                                    id = System.currentTimeMillis(),
+                                    carId = car.id,
+                                    name = workName,
+                                    intervalKm = kmValue,
+                                    intervalMonths = monthValue,
+                                    lastMileage = actualMileage,
+                                    lastDate = if (hasExecution) executionDate else 0L,
+                                    hasLastExecution = hasExecution
+                                )
+                            )
+                        } else {
+                            existing.name = workName
+                            existing.intervalKm = kmValue
+                            existing.intervalMonths = monthValue
+                            existing.hasLastExecution = hasExecution
+                            existing.lastMileage = if (hasExecution) actualMileage else 0
+                            existing.lastDate = if (hasExecution) executionDate else 0L
+                            if (!hasExecution) existing.skipped = false
+                        }
+
+                        saveWorks()
+                        dialog.dismiss()
+                        showSection("Регламент")
+                    }
+                }
+                dialog.show()
+            }
+    }
+
+    private fun completeWork(work: MaintenanceWork) {
+        val car = cars.firstOrNull { it.id == work.carId } ?: return
+
+        val form = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(24), dp(8), dp(24), dp(8))
+        }
+
+        val mileage = EditText(this).apply {
+            hint = "Фактический пробег выполнения, км"
+            inputType = InputType.TYPE_CLASS_NUMBER
+            setText(car.mileage)
+        }
+
+        var selectedDate = System.currentTimeMillis()
+        val dateButton = Button(this).apply {
+            isAllCaps = false
+            text = "Дата выполнения: ${formatDate(selectedDate)}"
+            setOnClickListener {
+                showDatePicker(selectedDate) { chosen ->
+                    selectedDate = chosen
+                    text = "Дата выполнения: ${formatDate(selectedDate)}"
+                }
+            }
+        }
+
+        form.addView(label("Укажи фактические дату и пробег выполнения работы."))
+        form.addView(dateButton)
+        form.addView(mileage)
+
+        AlertDialog.Builder(this)
+            .setTitle("Выполнить работу")
+            .setView(form)
+            .setPositiveButton("Сохранить", null)
+            .setNegativeButton("Отмена", null)
+            .create()
+            .also { dialog ->
+                dialog.setOnShowListener {
+                    dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                        val actualMileage = mileage.text.toString().toIntOrNull()
+
+                        if (actualMileage == null) {
+                            mileage.error = "Укажи пробег"
+                            return@setOnClickListener
+                        }
+
+                        work.lastMileage = actualMileage
+                        work.lastDate = selectedDate
+                        work.hasLastExecution = true
+                        work.skipped = false
+
+                        saveWorks()
+                        dialog.dismiss()
+                        showSection("Регламент")
+                    }
+                }
+                dialog.show()
+            }
+    }
+
+    private fun showDatePicker(
+        initialDate: Long,
+        onSelected: (Long) -> Unit
+    ) {
+        val calendar = Calendar.getInstance().apply {
+            timeInMillis = initialDate
+        }
+
+        DatePickerDialog(
+            this,
+            { _, year, month, day ->
+                val chosen = Calendar.getInstance().apply {
+                    set(Calendar.YEAR, year)
+                    set(Calendar.MONTH, month)
+                    set(Calendar.DAY_OF_MONTH, day)
+                    set(Calendar.HOUR_OF_DAY, 12)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+                onSelected(chosen.timeInMillis)
+            },
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
+        ).show()
+    }
+
+    private fun getWorkStatus(work: MaintenanceWork, car: Car): String {
+        if (work.skipped) return "Пропущена"
+        if (!work.hasLastExecution) return "Необходимо выполнить"
+
+        val currentMileage = car.mileage.toIntOrNull() ?: 0
+        val dueByKm = work.intervalKm > 0 &&
+            currentMileage >= work.lastMileage + work.intervalKm
+
+        var dueByDate = false
+        if (work.intervalMonths > 0 && work.lastDate > 0L) {
+            val date = Calendar.getInstance().apply {
+                timeInMillis = work.lastDate
+                add(Calendar.MONTH, work.intervalMonths)
+            }
+            dueByDate = System.currentTimeMillis() >= date.timeInMillis
+        }
+
+        return if (dueByKm || dueByDate) {
+            "Необходимо выполнить"
+        } else {
+            "Срок ещё не наступил"
+        }
+    }
+
+    private fun statusColor(work: MaintenanceWork, car: Car): Int {
+        if (work.skipped) return purple
+        if (work.preventive) return yellow
+        if (!work.hasLastExecution ||
+            getWorkStatus(work, car) == "Необходимо выполнить"
+        ) return red
+        return green
+    }
+
+    private fun showStatistics(root: LinearLayout) {
+        val car = selectedCar()
+        if (car == null) {
+            root.addView(label("Сначала добавьте автомобиль."))
+            return
+        }
+
+        val list = works.filter { it.carId == car.id }
+        val completed = list.count { it.hasLastExecution && !it.skipped }
+        val skipped = list.count { it.skipped }
+        val notDone = list.count { !it.hasLastExecution && !it.skipped }
+
+        root.addView(label(
+            "Автомобиль: ${car.brand} ${car.model}\n\n" +
+            "Всего работ: ${list.size}\n" +
+            "Выполнено: $completed\n" +
+            "Ещё не выполнялось: $notDone\n" +
+            "Пропущено: $skipped"
+        ))
+    }
+
+    private fun showMore(root: LinearLayout) {
+        root.addView(label(
+            "Здесь будут дополнительные функции: перечень деталей, " +
+            "история обслуживания, вложения и резервное копирование."
+        ))
+        root.addView(actionButton("Добавить автомобиль") {
+            showCarDialog(null)
+        })
+    }
+
+    private fun label(value: String): TextView =
+        TextView(this).apply {
+            text = value
+            textSize = 16f
+            setTextColor(Color.BLACK)
+            setPadding(dp(8), dp(12), dp(8), dp(12))
+        }
+
+    private fun actionButton(value: String, action: () -> Unit): Button =
+        Button(this).apply {
+            text = value
+            isAllCaps = false
+            setOnClickListener { action() }
+        }
+
+    private fun formatDate(time: Long): String {
+        if (time <= 0L) return "не указана"
+        return SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
+            .format(Date(time))
     }
 }
