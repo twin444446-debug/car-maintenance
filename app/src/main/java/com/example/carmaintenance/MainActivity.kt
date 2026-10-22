@@ -47,6 +47,7 @@ class MainActivity : Activity() {
 
     private val cars = mutableListOf<Car>()
     private val works = mutableListOf<MaintenanceWork>()
+
     private var selectedCarId = -1L
 
     private val green = Color.rgb(46, 125, 50)
@@ -73,83 +74,50 @@ class MainActivity : Activity() {
         showSection("Главная")
     }
 
+    private fun saveSelectedCar() {
+        prefs.edit()
+            .putLong("selected_car_id", selectedCarId)
+            .apply()
+    }
+
     private fun loadCars() {
         cars.clear()
 
-        val a = try {
+        val array = try {
             JSONArray(prefs.getString("cars", "[]"))
         } catch (_: Exception) {
             JSONArray()
         }
 
-        for (i in 0 until a.length()) {
-            val o = a.optJSONObject(i) ?: continue
+        for (i in 0 until array.length()) {
+            val o = array.optJSONObject(i) ?: continue
 
             cars.add(
                 Car(
-                    o.optLong("id", System.currentTimeMillis() + i),
-                    o.optString("brand"),
-                    o.optString("model"),
-                    o.optString("year"),
-                    o.optString("vin"),
-                    o.optString("mileage"),
-                    o.optString("engine"),
-                    o.optString("fuel", "Бензин"),
-                    o.optBoolean("hasLpg"),
-                    o.optString("notes")
+                    id = o.optLong("id", System.currentTimeMillis() + i),
+                    brand = o.optString("brand"),
+                    model = o.optString("model"),
+                    year = o.optString("year"),
+                    vin = o.optString("vin"),
+                    mileage = o.optString("mileage"),
+                    engine = o.optString("engine"),
+                    fuel = o.optString("fuel", "Бензин"),
+                    hasLpg = o.optBoolean("hasLpg"),
+                    notes = o.optString("notes")
                 )
             )
         }
     }
 
     private fun saveCars() {
-        val a = JSONArray()
+        val array = JSONArray()
 
-        cars.forEach { c ->
-            a.put(
+        cars.forEach { car ->
+            array.put(
                 JSONObject().apply {
-                    put("id", c.id)
-                    put("brand", c.brand)
-                    put("model", c.model)
-                    put("year", c.year)
-                    put("vin", c.vin)
-                    put("mileage", c.mileage)
-                    put("engine", c.engine)
-                    put("fuel", c.fuel)
-                    put("hasLpg", c.hasLpg)
-                    put("notes", c.notes)
-                }
-            )
-        }
-
-        prefs.edit()
-            .putString("cars", a.toString())
-            .apply()
-    }
-
-    private fun loadWorks() {
-        works.clear()
-
-        val a = try {
-            JSONArray(prefs.getString("maintenance_works", "[]"))
-        } catch (_: Exception) {
-            JSONArray()
-        }
-
-        for (i in 0 until a.length()) {
-            val o = a.optJSONObject(i) ?: continue
-
-            val hasExecution =
-                if (o.has("hasLastExecution")) {
-                    o.optBoolean("hasLastExecution")
-                } else {
-                    true
-                }
-
-            works.add(
-                MaintenanceWork(
-                    id = o.optLong("id"),
-                    carId = o.optLong("carId"),
-                    name = o.optString("name"),
-                    intervalKm = o.optInt("intervalKm"),
-                    intervalMonths =
+                    put("id", car.id)
+                    put("brand", car.brand)
+                    put("model", car.model)
+                    put("year", car.year)
+                    put("vin", car.vin)
+                    put("mileage", car
