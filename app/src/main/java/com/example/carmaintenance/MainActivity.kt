@@ -1190,7 +1190,122 @@ class MainActivity : Activity() {
         val isNew = existing == null
         val target = existing ?: MaintenanceWork(carId = selectedCarId)
 
-        val name = editText("Название работы", target.name)
+        val name = editText(
+            "Название работы",
+            target.name
+        )
+
         val intervalKm = editText(
             "Интервал в километрах (0 — не задан)",
-            target.interval
+            if (target.intervalKm == 0) "" else target.intervalKm.toString(),
+            number = true
+        )
+
+        val intervalMonths = editText(
+            "Интервал в месяцах (0 — не задан)",
+            if (target.intervalMonths == 0) "" else target.intervalMonths.toString(),
+            number = true
+        )
+
+        val oilType = editText(
+            "Тип масла",
+            target.oilType
+        )
+
+        val oilName = editText(
+            "Название / марка масла",
+            target.oilName
+        )
+
+        val preventive = CheckBox(this).apply {
+            text = "Профилактическая работа"
+            setTextColor(TEXT)
+            isChecked = target.preventive
+        }
+
+        val form = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(24, 8, 24, 0)
+
+            addView(name)
+            addView(intervalKm)
+            addView(intervalMonths)
+            addView(oilType)
+            addView(oilName)
+            addView(preventive)
+        }
+
+        val scroll = ScrollView(this).apply {
+            addView(form)
+        }
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(
+                if (isNew) {
+                    "Новая работа"
+                } else {
+                    "Изменить работу"
+                }
+            )
+            .setView(scroll)
+            .setNegativeButton("Отмена", null)
+            .setPositiveButton("Сохранить", null)
+            .create()
+
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+
+                val nameValue = name.text.toString().trim()
+
+                val intervalKmValue =
+                    intervalKm.text.toString().toIntOrNull() ?: 0
+
+                val intervalMonthsValue =
+                    intervalMonths.text.toString().toIntOrNull() ?: 0
+
+                if (nameValue.isBlank()) {
+                    Toast.makeText(
+                        this,
+                        "Укажите название работы",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    return@setOnClickListener
+                }
+
+                if (intervalKmValue < 0 || intervalMonthsValue < 0) {
+                    Toast.makeText(
+                        this,
+                        "Интервал не может быть отрицательным",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    return@setOnClickListener
+                }
+
+                target.carId = selectedCarId
+                target.name = nameValue
+                target.intervalKm = intervalKmValue
+                target.intervalMonths = intervalMonthsValue
+                target.oilType = oilType.text.toString().trim()
+                target.oilName = oilName.text.toString().trim()
+                target.preventive = preventive.isChecked
+
+                if (preventive.isChecked) {
+                    target.skipped = false
+                }
+
+                if (isNew) {
+                    works.add(target)
+                }
+
+                saveData()
+                dialog.dismiss()
+
+                currentTab = "Перечень"
+                updateNavigation()
+                showWorks()
+            }
+        }
+
+        dialog.show()
+    }
+}
