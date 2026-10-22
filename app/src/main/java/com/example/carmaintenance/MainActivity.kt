@@ -856,6 +856,7 @@ class MainActivity : Activity() {
 
     // -------------------- СТАТИСТИКА --------------------
 
+
     private fun showStatistics() {
         render("Статистика") {
             val list = carWorks()
@@ -925,7 +926,6 @@ addStatus(
             }
         }
     }
-
     private fun exportStatistics() {
         try {
             val selected = car()
@@ -940,43 +940,74 @@ addStatus(
                 lines.add("Год: ${selected.year}")
                 lines.add("VIN: ${selected.vin}")
                 lines.add("Пробег: ${selected.mileage} км")
-                lines.add("")
+
+    private fun showStatistics() {
+        render("Статистика") {
+            val list = carWorks()
+
+            val summary = card()
+            summary.addView(label("Сводка по автомобилю", 18, TEXT, true))
+            summary.addStatus("Всего работ", list.size, BLUE)
+            addStatus(summary, "Всего работ", list.size, BLUE)
+
+addStatus(
+    summary,
+    "Требуют выполнения",
+    list.count { status(it) == "Выполнить" },
+    RED
+)
+
+addStatus(
+    summary,
+    "Срок не наступил",
+    list.count { status(it) == "В норме" },
+    GREEN
+)
+
+addStatus(
+    summary,
+    "Пропущено",
+    list.count { status(it) == "Пропущено" },
+    PURPLE
+)
+
+addStatus(
+    summary,
+    "Профилактика",
+    list.count { status(it) == "Профилактика" },
+    YELLOW
+)
+
+            addCard(this, summary)
+
+            val history = card()
+            history.addView(label("Последние записи", 18, TEXT, true))
+
+            val executed = list
+                .filter { it.hasLastExecution }
+                .sortedByDescending { it.lastDate }
+
+            if (executed.isEmpty()) {
+                history.addView(
+                    label("Записей о выполнении пока нет.", 14, MUTED)
+                )
+            } else {
+                executed.forEach { work ->
+                    history.addView(
+                        label("${work.lastDate} • ${work.name}", 14, TEXT)
+                    )
+                    history.addView(
+                        label("Пробег: ${work.lastMileage} км", 13, MUTED)
+                    )
+                    history.addView(space(5))
+                }
             }
 
-            carWorks().forEach { work ->
-                lines.add("Работа: ${work.name}")
-                lines.add("Статус: ${status(work)}")
-                lines.add("Последняя дата: ${work.lastDate}")
-                lines.add("Последний пробег: ${work.lastMileage} км")
-                lines.add(
-                    "Интервал: ${work.intervalKm} км / ${work.intervalMonths} мес."
-                )
-                lines.add("Тип масла: ${work.oilType}")
-                lines.add("Название масла: ${work.oilName}")
-                lines.add("")
+            addCard(this, history)
+
+            addButton(this, "Сохранить статистику в TXT") {
+                exportStatistics()
             }
-
-            val directory = getExternalFilesDir(null) ?: filesDir
-            val file = File(
-                directory,
-                "maintenance_${System.currentTimeMillis()}.txt"
-            )
-
-            file.writeText(lines.joinToString("\n"), Charsets.UTF_8)
-
-            AlertDialog.Builder(this)
-                .setTitle("Отчёт сохранён")
-                .setMessage(
-                    "Файл создан в папке приложения:\n${file.absolutePath}"
-                )
-                .setPositiveButton("OK", null)
-                .show()
-        } catch (e: Exception) {
-            Toast.makeText(
-                this,
-                "Ошибка сохранения отчёта: ${e.message}",
-                Toast.LENGTH_LONG
-            ).show()
         }
     }
 
