@@ -917,14 +917,6 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun LinearLayout.addStatus(
-        title: String,
-        count: Int,
-        color: Int
-    ) {
-        addStatus(this, title, count, color)
-    }
-
     private fun exportStatistics() {
         try {
             val selected = car()
