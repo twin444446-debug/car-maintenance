@@ -5,8 +5,10 @@ import android.app.AlertDialog
 import android.app.DatePickerDialog
 import android.os.Bundle
 import android.graphics.Color
+import android.graphics.Typeface
 import android.text.InputType
 import android.view.Gravity
+import android.view.View
 import android.view.WindowManager
 import android.widget.*
 import org.json.JSONArray
@@ -52,10 +54,17 @@ class MainActivity : Activity() {
     private val works = mutableListOf<MaintenanceWork>()
     private var selectedCarId = -1L
 
-    private val green = Color.rgb(46, 125, 50)
-    private val red = Color.rgb(198, 40, 40)
-    private val purple = Color.rgb(123, 31, 162)
-    private val yellow = Color.rgb(249, 168, 37)
+    private val background = Color.rgb(18, 22, 28)
+    private val panel = Color.rgb(32, 39, 48)
+    private val panelLight = Color.rgb(43, 52, 63)
+    private val textPrimary = Color.rgb(240, 243, 247)
+    private val textSecondary = Color.rgb(174, 184, 196)
+    private val accent = Color.rgb(76, 175, 80)
+
+    private val green = Color.rgb(76, 175, 80)
+    private val red = Color.rgb(239, 83, 80)
+    private val purple = Color.rgb(186, 104, 200)
+    private val yellow = Color.rgb(255, 213, 79)
 
     private val sections = listOf(
         "Главная", "Перечень работ", "Регламент", "Статистика", "Ещё"
@@ -65,11 +74,9 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
 
         window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
-        window.statusBarColor = Color.WHITE
-        window.navigationBarColor = Color.WHITE
-        window.decorView.systemUiVisibility =
-            android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or
-            android.view.View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+        window.statusBarColor = background
+        window.navigationBarColor = background
+        window.decorView.systemUiVisibility = 0
 
         loadCars()
         loadWorks()
@@ -189,18 +196,22 @@ class MainActivity : Activity() {
         val page = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(12), dp(8), dp(12), dp(4))
+            setBackgroundColor(background)
             fitsSystemWindows = true
         }
 
         page.addView(TextView(this).apply {
             text = section
-            textSize = 23f
-            setTextColor(Color.BLACK)
-            setPadding(dp(4), dp(4), dp(4), dp(8))
+            textSize = 24f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(textPrimary)
+            setPadding(dp(8), dp(12), dp(8), dp(16))
         })
 
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
+            setPadding(0, 0, 0, dp(8))
+            setBackgroundColor(background)
         }
 
         when (section) {
@@ -213,6 +224,7 @@ class MainActivity : Activity() {
 
         val scroll = ScrollView(this).apply {
             isFillViewport = true
+            setBackgroundColor(background)
             addView(content)
         }
 
@@ -226,8 +238,9 @@ class MainActivity : Activity() {
         val nav = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
-            setBackgroundColor(Color.rgb(245, 245, 245))
-            setPadding(0, dp(2), 0, dp(2))
+            setBackgroundColor(panel)
+            setPadding(0, dp(4), 0, dp(4))
+            elevation = dp(8).toFloat()
         }
 
         val labels = listOf(
@@ -240,14 +253,19 @@ class MainActivity : Activity() {
                     text = labels[index]
                     textSize = 10f
                     gravity = Gravity.CENTER
-                    setTextColor(if (item == section) green else Color.BLACK)
-                    setPadding(dp(1), dp(6), dp(1), dp(6))
+                    typeface = if (item == section) {
+                        Typeface.DEFAULT_BOLD
+                    } else {
+                        Typeface.DEFAULT
+                    }
+                    setTextColor(if (item == section) green else textSecondary)
+                    setPadding(dp(1), dp(8), dp(1), dp(8))
                     minHeight = dp(48)
                     isClickable = true
                     isFocusable = true
 
                     if (item == section) {
-                        setBackgroundColor(Color.rgb(220, 235, 220))
+                        setBackgroundColor(panelLight)
                     }
 
                     setOnClickListener { showSection(item) }
@@ -273,12 +291,19 @@ class MainActivity : Activity() {
     private fun selectedCar(): Car? =
         cars.firstOrNull { it.id == selectedCarId }
 
+    private fun card(): LinearLayout =
+        LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(14), dp(12), dp(14), dp(12))
+            setBackgroundColor(panel)
+        }
+
     private fun showHome(root: LinearLayout) {
         val car = selectedCar()
 
         if (car == null) {
             root.addView(label("Автомобиль пока не добавлен."))
-            root.addView(actionButton("Добавить автомобиль") {
+            root.addView(actionButton("＋  Добавить автомобиль") {
                 showCarDialog(null)
             })
             if (cars.isNotEmpty()) {
@@ -289,23 +314,40 @@ class MainActivity : Activity() {
             return
         }
 
-        root.addView(label(
-            "${car.brand} ${car.model}\n" +
-            "Год: ${car.year}\n" +
-            "Пробег: ${car.mileage} км\n" +
-            "VIN: ${car.vin.ifBlank { "не указан" }}\n" +
-            "Двигатель: ${car.engine}\n" +
-            "Топливо: ${car.fuel}" +
-            if (car.hasLpg) "\nУстановлено ГБО" else ""
-        ))
+        val carCard = card()
+        carCard.addView(TextView(this).apply {
+            text = "${car.brand} ${car.model}"
+            textSize = 24f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(textPrimary)
+            setPadding(0, 0, 0, dp(8))
+        })
+
+        carCard.addView(label("Год выпуска: ${car.year}"))
+        carCard.addView(label("Пробег: ${car.mileage} км"))
+        carCard.addView(label("VIN: ${car.vin.ifBlank { "не указан" }}"))
+        carCard.addView(label("Двигатель: ${car.engine}"))
+        carCard.addView(label("Топливо: ${car.fuel}"))
+        if (car.hasLpg) carCard.addView(label("Установлено ГБО"))
+        if (car.notes.isNotBlank()) carCard.addView(label("Примечания: ${car.notes}"))
+
+        root.addView(carCard, cardParams())
 
         val carWorks = works.filter { it.carId == car.id }
         val overdue = carWorks.count {
             getWorkStatus(it, car) == "Необходимо выполнить"
         }
 
-        root.addView(label("Регламентных работ: ${carWorks.size}"))
-        root.addView(label("Требуют выполнения: $overdue"))
+        val statsCard = card()
+        statsCard.addView(label("Регламентных работ: ${carWorks.size}"))
+        statsCard.addView(TextView(this).apply {
+            text = "Требуют выполнения: $overdue"
+            textSize = 18f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(if (overdue > 0) red else green)
+            setPadding(dp(8), dp(10), dp(8), dp(10))
+        })
+        root.addView(statsCard, cardParams())
 
         root.addView(actionButton("Выбрать автомобиль") {
             selectCarDialog()
@@ -313,13 +355,21 @@ class MainActivity : Activity() {
         root.addView(actionButton("Изменить автомобиль") {
             showCarDialog(car)
         })
-        root.addView(actionButton("Добавить автомобиль") {
+        root.addView(actionButton("＋  Добавить автомобиль") {
             showCarDialog(null)
         })
-        root.addView(actionButton("Добавить регламентную работу") {
+        root.addView(actionButton("＋  Добавить регламентную работу") {
             showWorkDialog(null)
         })
     }
+
+    private fun cardParams(): LinearLayout.LayoutParams =
+        LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        ).apply {
+            bottomMargin = dp(12)
+        }
 
     private fun selectCarDialog() {
         if (cars.isEmpty()) return
@@ -342,7 +392,7 @@ class MainActivity : Activity() {
     private fun showCarDialog(existing: Car?) {
         val form = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(32), dp(8), dp(32), dp(8))
+            setPadding(dp(24), dp(8), dp(24), dp(8))
         }
 
         fun field(
@@ -423,14 +473,26 @@ class MainActivity : Activity() {
         if (list.isEmpty()) root.addView(label("Работ пока нет."))
 
         list.forEach { work ->
-            root.addView(actionButton(
-                work.name + "\n" + getWorkStatus(work, car)
-            ) {
-                showWorkActions(work)
+            val status = getWorkStatus(work, car)
+            val item = card()
+            item.addView(TextView(this).apply {
+                text = work.name
+                textSize = 18f
+                typeface = Typeface.DEFAULT_BOLD
+                setTextColor(textPrimary)
             })
+            item.addView(TextView(this).apply {
+                text = status
+                textSize = 14f
+                setTextColor(statusColor(work, car))
+                setPadding(0, dp(6), 0, dp(4))
+            })
+            item.setOnClickListener { showWorkActions(work) }
+            item.isClickable = true
+            root.addView(item, cardParams())
         }
 
-        root.addView(actionButton("Добавить работу") {
+        root.addView(actionButton("＋  Добавить работу") {
             showWorkDialog(null)
         })
     }
@@ -447,14 +509,12 @@ class MainActivity : Activity() {
 
         list.forEach { work ->
             val status = getWorkStatus(work, car)
-            val block = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(dp(12), dp(12), dp(12), dp(12))
-            }
+            val block = card()
 
             block.addView(TextView(this).apply {
                 text = work.name
                 textSize = 18f
+                typeface = Typeface.DEFAULT_BOLD
                 setTextColor(statusColor(work, car))
             })
 
@@ -470,11 +530,10 @@ class MainActivity : Activity() {
             block.addView(actionButton("Действия") {
                 showWorkActions(work)
             })
-            root.addView(block)
-            root.addView(label("────────────"))
+            root.addView(block, cardParams())
         }
 
-        root.addView(actionButton("Добавить работу") {
+        root.addView(actionButton("＋  Добавить работу") {
             showWorkDialog(null)
         })
     }
@@ -584,8 +643,7 @@ class MainActivity : Activity() {
 
         fun updateExecutionFields() {
             executionFields.visibility =
-                if (notDone.isChecked) android.view.View.GONE
-                else android.view.View.VISIBLE
+                if (notDone.isChecked) View.GONE else View.VISIBLE
         }
 
         notDone.setOnCheckedChangeListener { _, _ ->
@@ -793,21 +851,30 @@ class MainActivity : Activity() {
         val skipped = list.count { it.skipped }
         val notDone = list.count { !it.hasLastExecution && !it.skipped }
 
-        root.addView(label(
-            "Автомобиль: ${car.brand} ${car.model}\n\n" +
-            "Всего работ: ${list.size}\n" +
-            "Выполнено: $completed\n" +
-            "Ещё не выполнялось: $notDone\n" +
-            "Пропущено: $skipped"
-        ))
+        val block = card()
+        block.addView(TextView(this).apply {
+            text = "Статистика обслуживания"
+            textSize = 20f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(textPrimary)
+        })
+        block.addView(label("Автомобиль: ${car.brand} ${car.model}"))
+        block.addView(label("Всего работ: ${list.size}"))
+        block.addView(label("Выполнено: $completed"))
+        block.addView(label("Ещё не выполнялось: $notDone"))
+        block.addView(label("Пропущено: $skipped"))
+        root.addView(block, cardParams())
     }
 
     private fun showMore(root: LinearLayout) {
-        root.addView(label(
-            "Здесь будут дополнительные функции: перечень деталей, " +
-            "история обслуживания, вложения и резервное копирование."
+        val block = card()
+        block.addView(label(
+            "Дополнительные функции\n\n" +
+            "В следующих версиях здесь можно добавить перечень деталей, " +
+            "историю обслуживания, вложения и резервное копирование."
         ))
-        root.addView(actionButton("Добавить автомобиль") {
+        root.addView(block, cardParams())
+        root.addView(actionButton("＋  Добавить автомобиль") {
             showCarDialog(null)
         })
     }
@@ -815,16 +882,31 @@ class MainActivity : Activity() {
     private fun label(value: String): TextView =
         TextView(this).apply {
             text = value
-            textSize = 16f
-            setTextColor(Color.BLACK)
-            setPadding(dp(8), dp(12), dp(8), dp(12))
+            textSize = 15f
+            setTextColor(textSecondary)
+            setPadding(dp(8), dp(8), dp(8), dp(8))
         }
 
-    private fun actionButton(value: String, action: () -> Unit): Button =
+    private fun actionButton(
+        value: String,
+        action: () -> Unit
+    ): Button =
         Button(this).apply {
             text = value
             isAllCaps = false
+            textSize = 14f
+            setTextColor(textPrimary)
+            setBackgroundColor(panelLight)
+            setPadding(dp(8), dp(6), dp(8), dp(6))
             setOnClickListener { action() }
+
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = dp(8)
+                topMargin = dp(2)
+            }
         }
 
     private fun formatDate(time: Long): String {
