@@ -41,7 +41,9 @@ data class MaintenanceWork(
     var lastDate: Long = 0L,
     var hasLastExecution: Boolean = false,
     var skipped: Boolean = false,
-    var preventive: Boolean = false
+    var preventive: Boolean = false,
+    var oilType: String = "",
+    var oilName: String = ""
 )
 
 class MainActivity : Activity() {
@@ -54,12 +56,11 @@ class MainActivity : Activity() {
     private val works = mutableListOf<MaintenanceWork>()
     private var selectedCarId = -1L
 
-    private val background = Color.rgb(18, 22, 28)
-    private val panel = Color.rgb(32, 39, 48)
-    private val panelLight = Color.rgb(43, 52, 63)
+    private val appBackground = Color.rgb(18, 22, 28)
+    private val cardBackground = Color.rgb(32, 39, 48)
+    private val buttonBackground = Color.rgb(43, 52, 63)
     private val textPrimary = Color.rgb(240, 243, 247)
     private val textSecondary = Color.rgb(174, 184, 196)
-    private val accent = Color.rgb(76, 175, 80)
 
     private val green = Color.rgb(76, 175, 80)
     private val red = Color.rgb(239, 83, 80)
@@ -74,8 +75,8 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
 
         window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
-        window.statusBarColor = background
-        window.navigationBarColor = background
+        window.statusBarColor = appBackground
+        window.navigationBarColor = appBackground
         window.decorView.systemUiVisibility = 0
 
         loadCars()
@@ -167,7 +168,9 @@ class MainActivity : Activity() {
                     lastDate = o.optLong("lastDate"),
                     hasLastExecution = hasExecution,
                     skipped = o.optBoolean("skipped"),
-                    preventive = o.optBoolean("preventive")
+                    preventive = o.optBoolean("preventive"),
+                    oilType = o.optString("oilType"),
+                    oilName = o.optString("oilName")
                 )
             )
         }
@@ -187,6 +190,8 @@ class MainActivity : Activity() {
                 put("hasLastExecution", w.hasLastExecution)
                 put("skipped", w.skipped)
                 put("preventive", w.preventive)
+                put("oilType", w.oilType)
+                put("oilName", w.oilName)
             })
         }
         prefs.edit().putString("maintenance_works", a.toString()).apply()
@@ -196,7 +201,7 @@ class MainActivity : Activity() {
         val page = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(12), dp(8), dp(12), dp(4))
-            setBackgroundColor(background)
+            setBackgroundColor(appBackground)
             fitsSystemWindows = true
         }
 
@@ -211,7 +216,7 @@ class MainActivity : Activity() {
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(0, 0, 0, dp(8))
-            setBackgroundColor(background)
+            setBackgroundColor(appBackground)
         }
 
         when (section) {
@@ -224,7 +229,7 @@ class MainActivity : Activity() {
 
         val scroll = ScrollView(this).apply {
             isFillViewport = true
-            setBackgroundColor(background)
+            setBackgroundColor(appBackground)
             addView(content)
         }
 
@@ -238,7 +243,7 @@ class MainActivity : Activity() {
         val nav = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
-            setBackgroundColor(panel)
+            setBackgroundColor(cardBackground)
             setPadding(0, dp(4), 0, dp(4))
             elevation = dp(8).toFloat()
         }
@@ -265,7 +270,7 @@ class MainActivity : Activity() {
                     isFocusable = true
 
                     if (item == section) {
-                        setBackgroundColor(panelLight)
+                        setBackgroundColor(buttonBackground)
                     }
 
                     setOnClickListener { showSection(item) }
@@ -295,7 +300,7 @@ class MainActivity : Activity() {
         LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(14), dp(12), dp(14), dp(12))
-            setBackgroundColor(panel)
+            setBackgroundColor(cardBackground)
         }
 
     private fun showHome(root: LinearLayout) {
@@ -473,7 +478,6 @@ class MainActivity : Activity() {
         if (list.isEmpty()) root.addView(label("Работ пока нет."))
 
         list.forEach { work ->
-            val status = getWorkStatus(work, car)
             val item = card()
             item.addView(TextView(this).apply {
                 text = work.name
@@ -482,11 +486,15 @@ class MainActivity : Activity() {
                 setTextColor(textPrimary)
             })
             item.addView(TextView(this).apply {
-                text = status
+                text = getWorkStatus(work, car)
                 textSize = 14f
                 setTextColor(statusColor(work, car))
                 setPadding(0, dp(6), 0, dp(4))
             })
+            if (work.oilType.isNotBlank() || work.oilName.isNotBlank()) {
+                item.addView(label("Тип масла: ${work.oilType}"))
+                item.addView(label("Название масла: ${work.oilName}"))
+            }
             item.setOnClickListener { showWorkActions(work) }
             item.isClickable = true
             root.addView(item, cardParams())
@@ -521,11 +529,18 @@ class MainActivity : Activity() {
             block.addView(label(
                 if (work.hasLastExecution) {
                     "Последнее выполнение: ${formatDate(work.lastDate)}\n" +
-                    "Пробег выполнения: ${work.lastMileage} км\n$status"
+                        "Пробег выполнения: ${work.lastMileage} км\n$status"
                 } else {
                     "Работа ещё не выполнялась\n$status"
                 }
             ))
+
+            if (work.oilType.isNotBlank()) {
+                block.addView(label("Тип масла: ${work.oilType}"))
+            }
+            if (work.oilName.isNotBlank()) {
+                block.addView(label("Название масла: ${work.oilName}"))
+            }
 
             block.addView(actionButton("Действия") {
                 showWorkActions(work)
@@ -600,6 +615,15 @@ class MainActivity : Activity() {
             setText(if ((existing?.intervalMonths ?: 0) > 0) existing!!.intervalMonths.toString() else "")
         }
 
+        val oilType = EditText(this).apply {
+            hint = "Тип масла (если применимо)"
+            setText(existing?.oilType ?: "")
+        }
+        val oilName = EditText(this).apply {
+            hint = "Название масла (если применимо)"
+            setText(existing?.oilName ?: "")
+        }
+
         val notDone = CheckBox(this).apply {
             text = "Работа ещё не выполнялась"
             isChecked = existing?.hasLastExecution != true
@@ -654,6 +678,8 @@ class MainActivity : Activity() {
         form.addView(name)
         form.addView(km)
         form.addView(months)
+        form.addView(oilType)
+        form.addView(oilName)
         form.addView(notDone)
         form.addView(executionFields)
 
@@ -696,7 +722,9 @@ class MainActivity : Activity() {
                                     intervalMonths = monthValue,
                                     lastMileage = actualMileage,
                                     lastDate = if (hasExecution) executionDate else 0L,
-                                    hasLastExecution = hasExecution
+                                    hasLastExecution = hasExecution,
+                                    oilType = oilType.text.toString().trim(),
+                                    oilName = oilName.text.toString().trim()
                                 )
                             )
                         } else {
@@ -706,6 +734,8 @@ class MainActivity : Activity() {
                             existing.hasLastExecution = hasExecution
                             existing.lastMileage = if (hasExecution) actualMileage else 0
                             existing.lastDate = if (hasExecution) executionDate else 0L
+                            existing.oilType = oilType.text.toString().trim()
+                            existing.oilName = oilName.text.toString().trim()
                             if (!hasExecution) existing.skipped = false
                         }
 
@@ -870,8 +900,8 @@ class MainActivity : Activity() {
         val block = card()
         block.addView(label(
             "Дополнительные функции\n\n" +
-            "В следующих версиях здесь можно добавить перечень деталей, " +
-            "историю обслуживания, вложения и резервное копирование."
+                "В следующих версиях можно добавить перечень деталей, " +
+                "историю обслуживания, вложения и резервное копирование."
         ))
         root.addView(block, cardParams())
         root.addView(actionButton("＋  Добавить автомобиль") {
@@ -896,7 +926,7 @@ class MainActivity : Activity() {
             isAllCaps = false
             textSize = 14f
             setTextColor(textPrimary)
-            setBackgroundColor(panelLight)
+            setBackgroundColor(buttonBackground)
             setPadding(dp(8), dp(6), dp(8), dp(6))
             setOnClickListener { action() }
 
