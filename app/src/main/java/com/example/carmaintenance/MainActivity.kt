@@ -6,6 +6,8 @@ import android.os.Bundle
 import android.graphics.Color
 import android.text.InputType
 import android.view.Gravity
+import android.view.Window
+import android.view.WindowManager
 import android.widget.*
 import org.json.JSONArray
 import org.json.JSONObject
@@ -61,9 +63,24 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Не позволяем приложению заходить под системные панели.
+        window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+        window.statusBarColor = Color.WHITE
+        window.navigationBarColor = Color.WHITE
+        window.decorView.systemUiVisibility =
+            View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or
+            View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+
         loadCars()
         loadWorks()
         selectedCarId = prefs.getLong("selected_car_id", -1L)
+
+        if (cars.none { it.id == selectedCarId } && cars.isNotEmpty()) {
+            selectedCarId = cars.first().id
+            saveSelectedCar()
+        }
+
         showSection("Главная")
     }
 
@@ -172,15 +189,17 @@ class MainActivity : Activity() {
     private fun showSection(section: String) {
         val page = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(20, 16, 20, 12)
+            setPadding(dp(12), dp(8), dp(12), dp(4))
+            fitsSystemWindows = true
         }
 
-        page.addView(TextView(this).apply {
+        val title = TextView(this).apply {
             text = section
-            textSize = 25f
+            textSize = 23f
             setTextColor(Color.BLACK)
-            setPadding(0, 0, 0, 16)
-        })
+            setPadding(dp(4), dp(4), dp(4), dp(8))
+        }
+        page.addView(title)
 
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -194,8 +213,11 @@ class MainActivity : Activity() {
             "Ещё" -> showMore(content)
         }
 
-        val scroll = ScrollView(this)
-        scroll.addView(content)
+        val scroll = ScrollView(this).apply {
+            isFillViewport = true
+            addView(content)
+        }
+
         page.addView(
             scroll,
             LinearLayout.LayoutParams(
@@ -206,20 +228,56 @@ class MainActivity : Activity() {
         val nav = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
+            setBackgroundColor(Color.rgb(245, 245, 245))
+            setPadding(0, dp(2), 0, dp(2))
         }
 
-        sections.forEach { item ->
-            nav.addView(Button(this).apply {
-                text = item
-                textSize = 9f
-                setPadding(1, 4, 1, 4)
+        val labels = listOf(
+            "Главная",
+            "Перечень\nработ",
+            "Регламент",
+            "Статистика",
+            "Ещё"
+        )
+
+        sections.forEachIndexed { index, item ->
+            val button = TextView(this).apply {
+                text = labels[index]
+                textSize = 10f
+                gravity = Gravity.CENTER
+                setTextColor(Color.BLACK)
+                setPadding(dp(1), dp(6), dp(1), dp(6))
+                minHeight = dp(48)
+                isClickable = true
+                isFocusable = true
+
+                if (item == section) {
+                    setBackgroundColor(Color.rgb(220, 235, 220))
+                    setTextColor(green)
+                }
+
                 setOnClickListener { showSection(item) }
-            }, LinearLayout.LayoutParams(0, -2, 1f))
+            }
+
+            nav.addView(
+                button,
+                LinearLayout.LayoutParams(0, -2, 1f)
+            )
         }
 
-        page.addView(nav)
+        page.addView(
+            nav,
+            LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        )
+
         setContentView(page)
     }
+
+    private fun dp(value: Int): Int =
+        (value * resources.displayMetrics.density).toInt()
 
     private fun selectedCar(): Car? =
         cars.firstOrNull { it.id == selectedCarId }
@@ -293,15 +351,18 @@ class MainActivity : Activity() {
     private fun showCarDialog(existing: Car?) {
         val form = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(32, 8, 32, 8)
+            setPadding(dp(32), dp(8), dp(32), dp(8))
         }
 
-        fun field(hintText: String, value: String = "", numeric: Boolean = false) =
-            EditText(this).apply {
-                hint = hintText
-                setText(value)
-                if (numeric) inputType = InputType.TYPE_CLASS_NUMBER
-            }
+        fun field(
+            hintText: String,
+            value: String = "",
+            numeric: Boolean = false
+        ) = EditText(this).apply {
+            hint = hintText
+            setText(value)
+            if (numeric) inputType = InputType.TYPE_CLASS_NUMBER
+        }
 
         val brand = field("Марка", existing?.brand ?: "")
         val model = field("Модель", existing?.model ?: "")
@@ -322,9 +383,13 @@ class MainActivity : Activity() {
         form.addView(lpg)
         form.addView(notes)
 
+        val scroll = ScrollView(this).apply {
+            addView(form)
+        }
+
         AlertDialog.Builder(this)
             .setTitle(if (existing == null) "Новый автомобиль" else "Изменить автомобиль")
-            .setView(form)
+            .setView(scroll)
             .setPositiveButton("Сохранить") { _, _ ->
                 if (existing == null) {
                     val car = Car(
@@ -395,7 +460,7 @@ class MainActivity : Activity() {
             val status = getWorkStatus(work, car)
             val block = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
-                setPadding(12, 12, 12, 12)
+                setPadding(dp(12), dp(12), dp(12), dp(12))
             }
 
             block.addView(TextView(this).apply {
@@ -469,7 +534,7 @@ class MainActivity : Activity() {
 
         val form = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(32, 8, 32, 8)
+            setPadding(dp(32), dp(8), dp(32), dp(8))
         }
 
         val name = EditText(this).apply {
@@ -626,7 +691,7 @@ class MainActivity : Activity() {
             text = value
             textSize = 16f
             setTextColor(Color.BLACK)
-            setPadding(8, 12, 8, 12)
+            setPadding(dp(8), dp(12), dp(8), dp(12))
         }
 
     private fun actionButton(value: String, action: () -> Unit): Button =
