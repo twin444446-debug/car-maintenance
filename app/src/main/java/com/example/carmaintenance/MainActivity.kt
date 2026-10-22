@@ -863,26 +863,35 @@ class MainActivity : Activity() {
             val summary = card()
             summary.addView(label("Сводка по автомобилю", 18, TEXT, true))
             summary.addStatus("Всего работ", list.size, BLUE)
-            summary.addStatus(
-                "Требуют выполнения",
-                list.count { status(it) == "Выполнить" },
-                RED
-            )
-            summary.addStatus(
-                "Срок не наступил",
-                list.count { status(it) == "В норме" },
-                GREEN
-            )
-            summary.addStatus(
-                "Пропущено",
-                list.count { status(it) == "Пропущено" },
-                PURPLE
-            )
-            summary.addStatus(
-                "Профилактика",
-                list.count { status(it) == "Профилактика" },
-                YELLOW
-            )
+            addStatus(summary, "Всего работ", list.size, BLUE)
+
+addStatus(
+    summary,
+    "Требуют выполнения",
+    list.count { status(it) == "Выполнить" },
+    RED
+)
+
+addStatus(
+    summary,
+    "Срок не наступил",
+    list.count { status(it) == "В норме" },
+    GREEN
+)
+
+addStatus(
+    summary,
+    "Пропущено",
+    list.count { status(it) == "Пропущено" },
+    PURPLE
+)
+
+addStatus(
+    summary,
+    "Профилактика",
+    list.count { status(it) == "Профилактика" },
+    YELLOW
+)
 
             addCard(this, summary)
 
