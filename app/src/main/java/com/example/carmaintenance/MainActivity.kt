@@ -69,8 +69,8 @@ class MainActivity : Activity() {
         window.statusBarColor = Color.WHITE
         window.navigationBarColor = Color.WHITE
         window.decorView.systemUiVisibility =
-            View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or
-            View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+    android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or
+    android.view.View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
 
         loadCars()
         loadWorks()
