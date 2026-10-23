@@ -16,13 +16,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
 
-// Твои модели данных
+// Твои модели данных (оставил как есть)
 data class Car(
     val id: Long, var brand: String, var model: String, var year: String,
     var vin: String, var mileage: String, var engine: String, var fuel: String,
@@ -130,13 +128,23 @@ fun CarCard(car: Car) {
         colors = CardDefaults.cardColors(containerColor = CardColor)
     ) {
         Column {
-            Box(modifier = Modifier.height(200.dp)) {
-                AsyncImage(
-                    model = "https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?q=80&w=1000&auto=format&fit=crop",
-                    contentDescription = "Car",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
+            Box(modifier = Modifier.height(200.dp).fillMaxWidth()) {
+                // Локальная заглушка вместо картинки из интернета
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color(0xFF1E2A45)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Home,
+                        contentDescription = null,
+                        tint = TextSecondary.copy(alpha = 0.5f),
+                        modifier = Modifier.size(64.dp)
+                    )
+                }
+
+                // Градиент снизу для читаемости текста
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -161,7 +169,6 @@ fun CarCard(car: Car) {
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Заменено Speed на Info
                 SpecItem(Icons.Default.Info, "Пробег", "${car.mileage} км")
                 SpecItem(Icons.Default.Info, "VIN", car.vin)
                 SpecItem(Icons.Default.Build, "Двигатель", "${car.engine} л")
@@ -222,7 +229,6 @@ fun QuickActionsRow() {
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // Заменено DirectionsCar на Home
         QuickActionBtn("Выбрать", Icons.Default.Home, Color(0xFF4CAF50), Modifier.weight(1f))
         QuickActionBtn("Изменить", Icons.Default.Edit, Color(0xFF3498DB), Modifier.weight(1f))
         QuickActionBtn("Добавить", Icons.Default.Add, Color(0xFF9C27B0), Modifier.weight(1f))
