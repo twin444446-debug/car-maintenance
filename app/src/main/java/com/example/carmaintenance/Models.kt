@@ -1,13 +1,17 @@
 package com.example.carmaintenance
 
+import java.util.UUID
+
 data class Car(
-    val id: Long, var brand: String, var model: String, var year: String,
+    val id: String = UUID.randomUUID().toString(), 
+    var brand: String, var model: String, var year: String,
     var vin: String, var mileage: String, var engine: String, var fuel: String,
     var hasLpg: Boolean, var notes: String, var imageUri: String = ""
 )
 
 data class MaintenanceWork(
-    val id: Long, val carId: Long, var name: String,
+    val id: String = UUID.randomUUID().toString(), 
+    val carId: String, var name: String,
     var intervalKm: Int, var intervalMonths: Int,
     var lastMileage: Int = 0, var lastDate: Long = 0L,
     var hasLastExecution: Boolean = false, var skipped: Boolean = false,
@@ -16,8 +20,8 @@ data class MaintenanceWork(
 )
 
 data class WorkHistory(
-    val id: Long,
-    val carId: Long,
+    val id: String = UUID.randomUUID().toString(),
+    val carId: String,
     val workName: String,
     val date: Long,
     val mileage: Int,
