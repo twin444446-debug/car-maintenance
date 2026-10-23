@@ -523,7 +523,7 @@ fun AddEditWorkDialog(existingWork: MaintenanceWork?, onDismiss: () -> Unit, onS
     )
 }
 
-// === ОБНОВЛЕННЫЙ ДИАЛОГ ДЕЙСТВИЙ ===
+// === ДИАЛОГ ДЕЙСТВИЙ (БЕЗ СВЕТОФОРА) ===
 @Composable
 fun WorkActionsDialog(work: MaintenanceWork, onDismiss: () -> Unit, onComplete: (Int) -> Unit, onSkip: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit) {
     var showCompleteInput by remember { mutableStateOf(false) }
@@ -541,7 +541,6 @@ fun WorkActionsDialog(work: MaintenanceWork, onDismiss: () -> Unit, onComplete: 
                 }
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    // Кнопки действий в новом стиле (текст + цветная точка)
                     ActionRowButton("Выполнить работу", ColorGreen) { showCompleteInput = true }
                     ActionRowButton("Пропустить работу", ColorYellow) { onSkip() }
                     ActionRowButton("Редактировать данные", ColorBlue) { onEdit() }
@@ -558,7 +557,6 @@ fun WorkActionsDialog(work: MaintenanceWork, onDismiss: () -> Unit, onComplete: 
     )
 }
 
-// Вспомогательный компонент для кнопок с точками
 @Composable
 fun ActionRowButton(text: String, dotColor: Color, onClick: () -> Unit) {
     Row(
@@ -574,6 +572,7 @@ fun ActionRowButton(text: String, dotColor: Color, onClick: () -> Unit) {
     }
 }
 
+// === КАРТОЧКА АВТО ===
 @Composable
 fun CarCard(car: Car, onClick: () -> Unit) {
     Card(
@@ -598,4 +597,7 @@ fun CarCard(car: Car, onClick: () -> Unit) {
                     Text("${car.year} г.", color = TextSecondary, fontSize = 14.sp)
                 }
             }
-            Row(modifier = Modifier.fillMaxWidth().
+            Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                SpecItem(Icons.Default.Info, "Пробег", "${car.mileage} км")
+                SpecItem(Icons.Default.Info, "VIN", car.vin.ifBlank { "не указан" })
+                SpecItem(Icons.Default.Build, "Двигатель", car.engine.ifBlank { "не указан" })
