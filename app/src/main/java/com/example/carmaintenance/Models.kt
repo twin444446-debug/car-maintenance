@@ -3,7 +3,7 @@ package com.example.carmaintenance
 data class Car(
     val id: Long, var brand: String, var model: String, var year: String,
     var vin: String, var mileage: String, var engine: String, var fuel: String,
-    var hasLpg: Boolean, var notes: String
+    var hasLpg: Boolean, var notes: String, var imageUri: String = ""
 )
 
 data class MaintenanceWork(
