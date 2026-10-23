@@ -21,6 +21,120 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+// === ГЛАВНЫЙ КОНТЕЙНЕР (AppScreen) ===
+@Composable
+fun AppScreen() {
+    val context = LocalContext.current
+    var cars by remember { mutableStateOf(loadCars(context)) }
+    var works by remember { mutableStateOf(loadWorks(context)) }
+    
+    var currentScreen by remember { mutableStateOf("Главная") }
+    var selectedCarIndex by remember { mutableIntStateOf(0) }
+
+    var showAddCarDialog by remember { mutableStateOf(false) }
+    var showAddWorkDialog by remember { mutableStateOf(false) }
+    var editingWork by remember { mutableStateOf<MaintenanceWork?>(null) }
+    var actionWork by remember { mutableStateOf<MaintenanceWork?>(null) }
+    var infoCar by remember { mutableStateOf<Car?>(null) }
+
+    val selectedCar = cars.getOrNull(selectedCarIndex)
+
+    Scaffold(
+        containerColor = BgColor,
+        topBar = {
+            Row(
+                modifier = Modifier.fillMaxWidth().background(BgColor).statusBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Default.Menu, contentDescription = "Menu", tint = TextPrimary)
+                Text(currentScreen, color = TextPrimary, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                Icon(Icons.Default.Settings, contentDescription = "Settings", tint = TextPrimary)
+            }
+        },
+        bottomBar = {
+            NavigationBar(containerColor = NavColor) {
+                val navItems = listOf(
+                    Triple("Главная", Icons.Filled.Home, Icons.Outlined.Home),
+                    Triple("Работы", Icons.Filled.List, Icons.Outlined.List),
+                    Triple("Регламент", Icons.Filled.DateRange, Icons.Outlined.DateRange),
+                    Triple("Статистика", Icons.Filled.Info, Icons.Outlined.Info),
+                    Triple("Ещё", Icons.Filled.MoreVert, Icons.Outlined.MoreVert)
+                )
+                navItems.forEach { (title, filledIcon, outlinedIcon) ->
+                    NavigationBarItem(
+                        icon = { Icon(if (currentScreen == title) filledIcon else outlinedIcon, contentDescription = title) },
+                        label = { Text(title, fontSize = 10.sp) },
+                        selected = currentScreen == title,
+                        onClick = { currentScreen = title },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = ColorGreen,
+                            selectedTextColor = ColorGreen,
+                            indicatorColor = ColorGreen.copy(alpha = 0.1f),
+                            unselectedIconColor = TextSecondary,
+                            unselectedTextColor = TextSecondary
+                        )
+                    )
+                }
+            }
+        }
+    ) { paddingValues ->
+        Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
+            when (currentScreen) {
+                "Главная" -> HomeScreenContent(cars, works, selectedCarIndex, onCarSwipe = { selectedCarIndex = it }, 
+                    onAddCarClick = { showAddCarDialog = true }, 
+                    onAddWorkClick = { if (selectedCar != null) { editingWork = null; showAddWorkDialog = true } },
+                    onWorkClick = { actionWork = it },
+                    onCarClick = { infoCar = it }
+                )
+                "Работы" -> WorkListScreen(works.filter { it.carId == selectedCar?.id })
+                "Регламент" -> RegulationScreen()
+                "Статистика" -> StatisticsScreen()
+                "Ещё" -> MoreScreen()
+            }
+        }
+    }
+
+    if (showAddCarDialog) {
+        AddCarDialog(onDismiss = { showAddCarDialog = false }, onSave = { newCar ->
+            cars = cars + newCar
+            saveCars(context, cars)
+            showAddCarDialog = false
+        })
+    }
+
+    if (infoCar != null) {
+        CarInfoDialog(car = infoCar!!, onDismiss = { infoCar = null })
+    }
+
+    if (showAddWorkDialog && selectedCar != null) {
+        AddEditWorkDialog(existingWork = editingWork, onDismiss = { showAddWorkDialog = false }, onSave = { work ->
+            val updatedWork = work.copy(carId = selectedCar.id)
+            works = if (editingWork == null) works + updatedWork else works.map { if (it.id == updatedWork.id) updatedWork else it }
+            saveWorks(context, works)
+            showAddWorkDialog = false
+        })
+    }
+
+    if (actionWork != null) {
+        WorkActionsDialog(
+            work = actionWork!!, onDismiss = { actionWork = null },
+            onComplete = { newMileage ->
+                works = works.map { if (it.id == actionWork!!.id) it.copy(lastMileage = newMileage, lastDate = System.currentTimeMillis(), hasLastExecution = true, skipped = false) else it }
+                saveWorks(context, works); actionWork = null
+            },
+            onSkip = {
+                works = works.map { if (it.id == actionWork!!.id) it.copy(skipped = true) else it }
+                saveWorks(context, works); actionWork = null
+            },
+            onEdit = { editingWork = actionWork; actionWork = null; showAddWorkDialog = true },
+            onDelete = {
+                works = works.filter { it.id != actionWork!!.id }
+                saveWorks(context, works); actionWork = null
+            }
+        )
+    }
+}
 // === ГЛАВНЫЙ ЭКРАН ===
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
