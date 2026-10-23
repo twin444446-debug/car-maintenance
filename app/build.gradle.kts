@@ -1,7 +1,7 @@
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android") version "2.0.0" // Явно указываем Kotlin 2.0.0
-    id("org.jetbrains.kotlin.plugin.compose") version "2.0.0" // Тот же версия для Compose
+    id("org.jetbrains.kotlin.android") version "2.0.21"
+    id("org.jetbrains.kotlin.plugin.compose") version "2.0.21"
 }
 
 android {
