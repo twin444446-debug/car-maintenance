@@ -96,7 +96,12 @@ fun AppScreen() {
                 "Работы" -> WorkListScreen(works.filter { it.carId == selectedCar?.id }, selectedCar, onAddClick = { 
                     if (selectedCar != null) { editingWork = null; showAddWorkDialog = true } 
                 })
-                "Регламент" -> RegulationScreen()
+                "Регламент" -> RegulationScreen(
+                    works = works.filter { it.carId == selectedCar?.id }, 
+                    selectedCar = selectedCar, 
+                    onWorkClick = { actionWork = it },
+                    onAddClick = { if (selectedCar != null) { editingWork = null; showAddWorkDialog = true } } 
+                )
                 "Статистика" -> StatisticsScreen(works.filter { it.carId == selectedCar?.id }, selectedCar)
                 "Ещё" -> MoreScreen()
             }
@@ -210,7 +215,7 @@ fun HomeScreenContent(cars: List<Car>, works: List<MaintenanceWork>, selectedCar
     }
 }
 
-// === ЭКРАН РАБОТ (С ФИЛЬТРАМИ И КНОПКОЙ ДОБАВЛЕНИЯ) ===
+// === ЭКРАН РАБОТ ===
 @Composable
 fun WorkListScreen(works: List<MaintenanceWork>, selectedCar: Car?, onAddClick: () -> Unit) {
     if (selectedCar == null) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Сначала добавьте авто", color = TextSecondary) }; return }
@@ -248,6 +253,64 @@ fun WorkListScreen(works: List<MaintenanceWork>, selectedCar: Car?, onAddClick: 
     }
 }
 
+// === ЭКРАН РЕГЛАМЕНТА (С ГРУППИРОВКОЙ И КНОПКОЙ) ===
+@Composable
+fun RegulationScreen(works: List<MaintenanceWork>, selectedCar: Car?, onWorkClick: (MaintenanceWork) -> Unit, onAddClick: () -> Unit) {
+    if (selectedCar == null) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Сначала добавьте авто", color = TextSecondary) }; return }
+    
+    val requiresAttention = works.filter { getWorkStatus(it, selectedCar) == "Требуется" || getWorkStatus(it, selectedCar) == "Необходимо выполнить" || getWorkStatus(it, selectedCar) == "Пропущена" }
+    val soonWorks = works.filter { getWorkStatus(it, selectedCar) == "Скоро" }
+    val inOrderWorks = works.filter { getWorkStatus(it, selectedCar) == "Выполнено" }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(modifier = Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            item { Text("Регламент: ${selectedCar.brand} ${selectedCar.model}", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold) }
+
+            if (requiresAttention.isNotEmpty()) {
+                item { RegulationHeader("Требуют внимания", ColorRed) }
+                items(requiresAttention.size) { index ->
+                    val work = requiresAttention[index]
+                    val statusColor = if (getWorkStatus(work, selectedCar) == "Пропущена") ColorPurple else ColorRed
+                    WorkItemCard(work.name, getWorkStatus(work, selectedCar), statusColor, work.intervalKm) { onWorkClick(work) }
+                }
+            }
+
+            if (soonWorks.isNotEmpty()) {
+                item { RegulationHeader("Скоро", ColorYellow) }
+                items(soonWorks.size) { index ->
+                    val work = soonWorks[index]
+                    WorkItemCard(work.name, getWorkStatus(work, selectedCar), ColorYellow, work.intervalKm) { onWorkClick(work) }
+                }
+            }
+
+            if (inOrderWorks.isNotEmpty()) {
+                item { RegulationHeader("В порядке", ColorGreen) }
+                items(inOrderWorks.size) { index ->
+                    val work = inOrderWorks[index]
+                    WorkItemCard(work.name, getWorkStatus(work, selectedCar), ColorGreen, work.intervalKm) { onWorkClick(work) }
+                }
+            }
+
+            if (works.isEmpty()) {
+                item { Text("В регламенте пока нет работ", color = TextSecondary) }
+            }
+        }
+        
+        Button(onClick = onAddClick, modifier = Modifier.fillMaxWidth().padding(16.dp), colors = ButtonDefaults.buttonColors(containerColor = ColorPurple)) {
+            Text("Добавить работу", color = TextPrimary)
+        }
+    }
+}
+
+@Composable
+fun RegulationHeader(title: String, color: Color) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 8.dp)) {
+        Box(modifier = Modifier.size(8.dp).background(color, CircleShape))
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(title, color = color, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
 // === ЭКРАН СТАТИСТИКИ ===
 @Composable
 fun StatisticsScreen(works: List<MaintenanceWork>, selectedCar: Car?) {
@@ -269,7 +332,6 @@ fun StatisticsScreen(works: List<MaintenanceWork>, selectedCar: Car?) {
     }
 }
 
-@Composable fun RegulationScreen() { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Экран Регламент в разработке", color = TextSecondary) } }
 @Composable fun MoreScreen() { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Экран Ещё в разработке", color = TextSecondary) } }
 
 // === КОМПОНЕНТЫ (КАРТОЧКИ) ===
