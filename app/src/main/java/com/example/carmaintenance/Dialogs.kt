@@ -73,28 +73,42 @@ fun AddEditWorkDialog(existingWork: MaintenanceWork?, allWorks: List<Maintenance
     var name by remember { mutableStateOf(existingWork?.name ?: "") }
     var intervalKm by remember { mutableStateOf(if ((existingWork?.intervalKm ?: 0) > 0) existingWork!!.intervalKm.toString() else "") }
     var intervalMonths by remember { mutableStateOf(if ((existingWork?.intervalMonths ?: 0) > 0) existingWork!!.intervalMonths.toString() else "") }
-    var notDone by remember { mutableStateOf(existingWork?.hasLastExecution != true) }
-    var preventive by remember { mutableStateOf(existingWork?.preventive ?: false) }
     var notes by remember { mutableStateOf(existingWork?.notes ?: "") }
     var lastMileage by remember { mutableStateOf(if (existingWork?.hasLastExecution == true) existingWork.lastMileage.toString() else "") }
     var lastDate by remember { mutableStateOf(if (existingWork?.lastDate ?: 0L > 0L) existingWork!!.lastDate else System.currentTimeMillis()) }
-    
-    var isExtra by remember { mutableStateOf(existingWork != null && existingWork.intervalKm == 0 && existingWork.intervalMonths == 0) }
+    var preventive by remember { mutableStateOf(existingWork?.preventive ?: false) }
+
+    var workMode by remember { 
+        mutableStateOf(
+            if (existingWork != null && existingWork.intervalKm == 0 && existingWork.intervalMonths == 0) 2 
+            else if (existingWork?.hasLastExecution == true) 1 
+            else 0
+        ) 
+    }
 
     var attemptedSave by remember { mutableStateOf(false) }
     val isNameError = attemptedSave && name.isBlank()
-
     var expanded by remember { mutableStateOf(false) }
     val filteredSuggestions = allWorks.filter { it.name.contains(name, ignoreCase = true) && it.name != name }
 
     AlertDialog(
         onDismissRequest = onDismiss, containerColor = CardColor, title = { Text(if (existingWork == null) "Новая работа" else "Изменить работу", color = TextPrimary) },
         text = {
-            Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = isExtra, onCheckedChange = { isExtra = it }, colors = CheckboxDefaults.colors(checkedColor = ColorPurple))
-                    Text("Внеплановая работа (ремонт)", color = TextSecondary, fontSize = 14.sp)
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    val modes = listOf("В план", "Выполнено", "Ремонт")
+                    modes.forEachIndexed { index, title ->
+                        val isSelected = workMode == index
+                        Button(
+                            onClick = { workMode = index },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isSelected) (if (index == 1) ColorGreen else if (index == 2) ColorPurple else ColorBlue) else CardColor
+                            ),
+                            shape = RoundedCornerShape(8.dp), contentPadding = PaddingValues(0.dp)
+                        ) { Text(title, fontSize = 12.sp, color = TextPrimary, maxLines = 1) }
+                    }
                 }
 
                 Box {
@@ -111,11 +125,8 @@ fun AddEditWorkDialog(existingWork: MaintenanceWork?, allWorks: List<Maintenance
                                 text = { Text(suggestion.name, color = TextPrimary) }, 
                                 onClick = { 
                                     name = suggestion.name
-                                    // АВТОПОДСТАНОВКА ИНТЕРВАЛОВ
                                     if (suggestion.intervalKm > 0) intervalKm = suggestion.intervalKm.toString()
                                     if (suggestion.intervalMonths > 0) intervalMonths = suggestion.intervalMonths.toString()
-                                    if (suggestion.intervalKm == 0 && suggestion.intervalMonths == 0) isExtra = true
-                                    
                                     expanded = false 
                                 }
                             )
@@ -123,7 +134,7 @@ fun AddEditWorkDialog(existingWork: MaintenanceWork?, allWorks: List<Maintenance
                     }
                 }
 
-                if (!isExtra) {
+                if (workMode != 2) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedTextField(value = intervalKm, onValueChange = { intervalKm = it }, label = { Text("Интервал, км") }, modifier = Modifier.weight(1f), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
                         OutlinedTextField(value = intervalMonths, onValueChange = { intervalMonths = it }, label = { Text("Интервал, мес") }, modifier = Modifier.weight(1f), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
@@ -134,30 +145,29 @@ fun AddEditWorkDialog(existingWork: MaintenanceWork?, allWorks: List<Maintenance
                     }
                 }
 
-                OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text("Примечание (причина ремонта)") }, colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
-                
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = notDone, onCheckedChange = { notDone = it }, colors = CheckboxDefaults.colors(checkedColor = ColorGreen))
-                    Text("Не выполнялась", color = TextSecondary, fontSize = 14.sp)
-                }
-                
-                val dateStr = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(Date(lastDate))
-                Button(onClick = {
-                    val c = Calendar.getInstance(); c.timeInMillis = lastDate
-                    DatePickerDialog(context, { _, y, m, d -> lastDate = Calendar.getInstance().apply { set(y, m, d, 12, 0, 0) }.timeInMillis }, c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH)).show()
-                }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E2A45))) { Text("Дата выполнения: $dateStr", color = TextPrimary) }
-                
-                if (!notDone) {
+                if (workMode == 1) {
+                    val dateStr = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(Date(lastDate))
+                    Button(onClick = {
+                        val c = Calendar.getInstance(); c.timeInMillis = lastDate
+                        DatePickerDialog(context, { _, y, m, d -> lastDate = Calendar.getInstance().apply { set(y, m, d, 12, 0, 0) }.timeInMillis }, c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH)).show()
+                    }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E2A45))) { Text("Дата выполнения: $dateStr", color = TextPrimary) }
                     OutlinedTextField(value = lastMileage, onValueChange = { lastMileage = it }, label = { Text("Пробег при выполнении") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
                 }
+
+                OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text("Примечание (причина ремонта)") }, colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
             }
         },
         confirmButton = { 
             TextButton(onClick = {
                 if (name.isNotBlank()) {
+                    val isExtra = workMode == 2
+                    val hasExecution = workMode == 1
                     val finalKm = if (isExtra) 0 else (intervalKm.toIntOrNull() ?: 0)
                     val finalMonths = if (isExtra) 0 else (intervalMonths.toIntOrNull() ?: 0)
-                    onSave(MaintenanceWork(existingWork?.id ?: System.currentTimeMillis(), existingWork?.carId ?: 0L, name, finalKm, finalMonths, lastMileage.toIntOrNull() ?: 0, lastDate, !notDone, existingWork?.skipped ?: false, preventive, notes))
+                    val finalMileage = if (hasExecution) (lastMileage.toIntOrNull() ?: 0) else 0
+                    val finalDate = if (hasExecution) lastDate else 0L
+
+                    onSave(MaintenanceWork(existingWork?.id ?: System.currentTimeMillis(), existingWork?.carId ?: 0L, name, finalKm, finalMonths, finalMileage, finalDate, hasExecution, existingWork?.skipped ?: false, preventive, notes))
                 } else attemptedSave = true
             }) { Text("Сохранить", color = ColorGreen) } 
         },
