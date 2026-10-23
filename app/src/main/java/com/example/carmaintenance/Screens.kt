@@ -48,7 +48,15 @@ fun AppScreen() {
     Scaffold(
         containerColor = BgColor,
         topBar = {
-            Row(modifier = Modifier.fillMaxWidth().background(BgColor).statusBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(BgColor)
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Icon(Icons.Default.Menu, contentDescription = "Menu", tint = TextPrimary)
                 Text(currentScreen, color = TextPrimary, fontSize = 22.sp, fontWeight = FontWeight.Bold)
                 Icon(Icons.Default.Settings, contentDescription = "Settings", tint = TextPrimary)
@@ -64,32 +72,66 @@ fun AppScreen() {
                     Triple("Ещё", Icons.Filled.MoreVert, Icons.Outlined.MoreVert)
                 )
                 navItems.forEach { (title, filledIcon, outlinedIcon) ->
-                    NavigationBarItem(icon = { Icon(if (currentScreen == title) filledIcon else outlinedIcon, contentDescription = title) }, label = { Text(title, fontSize = 10.sp) }, selected = currentScreen == title, onClick = { currentScreen = title }, colors = NavigationBarItemDefaults.colors(selectedIconColor = ColorGreen, selectedTextColor = ColorGreen, indicatorColor = ColorGreen.copy(alpha = 0.1f), unselectedIconColor = TextSecondary, unselectedTextColor = TextSecondary))
+                    NavigationBarItem(
+                        icon = { Icon(if (currentScreen == title) filledIcon else outlinedIcon, contentDescription = title) },
+                        label = { Text(title, fontSize = 10.sp) },
+                        selected = currentScreen == title,
+                        onClick = { currentScreen = title },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = ColorGreen,
+                            selectedTextColor = ColorGreen,
+                            indicatorColor = ColorGreen.copy(alpha = 0.1f),
+                            unselectedIconColor = TextSecondary,
+                            unselectedTextColor = TextSecondary
+                        )
+                    )
                 }
             }
         }
     ) { paddingValues ->
         Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
             when (currentScreen) {
-                "Главная" -> HomeScreenContent(cars, works, history, selectedCarIndex, onCarSwipe = { selectedCarIndex = it }, onAddCarClick = { editingCar = null; showAddCarDialog = true }, onAddWorkClick = { if (selectedCar != null) { editingWork = null; showAddWorkDialog = true } }, onWorkClick = { actionWork = it }, onCarClick = { infoCar = it })
-                "Работы" -> HistoryScreen(history.filter { it.carId == selectedCar?.id }, selectedCar, onAddWorkClick = { if (selectedCar != null) { editingWork = null; showAddWorkDialog = true } })
+                "Главная" -> HomeScreenContent(
+                    cars = cars,
+                    works = works,
+                    history = history,
+                    selectedCarIndex = selectedCarIndex,
+                    onCarSwipe = { selectedCarIndex = it },
+                    onAddCarClick = { editingCar = null; showAddCarDialog = true },
+                    onAddWorkClick = { if (selectedCar != null) { editingWork = null; showAddWorkDialog = true } },
+                    onWorkClick = { actionWork = it },
+                    onCarClick = { infoCar = it }
+                )
+                "Работы" -> HistoryScreen(
+                    history = history.filter { it.carId == selectedCar?.id },
+                    selectedCar = selectedCar,
+                    onAddWorkClick = { if (selectedCar != null) { editingWork = null; showAddWorkDialog = true } }
+                )
                 "Регламент" -> RegulationScreen(
-                    works = works.filter { it.carId == selectedCar?.id }, 
-                    selectedCar = selectedCar, 
-                    onWorkClick = { actionWork = it }, 
-                    onAddClick = { isLpg -> 
-                        if (selectedCar != null) { 
+                    works = works.filter { it.carId == selectedCar?.id },
+                    selectedCar = selectedCar,
+                    onWorkClick = { actionWork = it },
+                    onAddClick = { isLpg ->
+                        if (selectedCar != null) {
                             editingWork = if (isLpg) MaintenanceWork(carId = selectedCar.id, name = "ГБО: ", intervalKm = 0, intervalMonths = 0) else null
-                            showAddWorkDialog = true 
-                        } 
+                            showAddWorkDialog = true
+                        }
                     }
                 )
-                "Статистика" -> StatisticsScreen(works.filter { it.carId == selectedCar?.id }, history.filter { it.carId == selectedCar?.id }, selectedCar, onWorkClick = { actionWork = it })
+                "Статистика" -> StatisticsScreen(
+                    works = works.filter { it.carId == selectedCar?.id },
+                    history = history.filter { it.carId == selectedCar?.id },
+                    selectedCar = selectedCar,
+                    onWorkClick = { actionWork = it }
+                )
                 "Ещё" -> {
                     if (currentScreen == "Редактор шаблона") {
                         TemplateEditorScreen(onBack = { currentScreen = "Ещё" })
                     } else {
-                        MoreScreen(context = context, onEditTemplateClick = { currentScreen = "Редактор шаблона" })
+                        MoreScreen(
+                            context = context,
+                            onEditTemplateClick = { currentScreen = "Редактор шаблона" }
+                        )
                     }
                 }
             }
@@ -97,27 +139,52 @@ fun AppScreen() {
     }
 
     if (showAddCarDialog) {
-        AddCarDialog(existingCar = editingCar, onDismiss = { showAddCarDialog = false; editingCar = null }, onSave = { newCar ->
-            if (editingCar == null) cars = cars + newCar else cars = cars.map { if (it.id == newCar.id) newCar else it }
-            saveCars(context, cars); showAddCarDialog = false; editingCar = null
-        })
+        AddCarDialog(
+            existingCar = editingCar,
+            onDismiss = { showAddCarDialog = false; editingCar = null },
+            onSave = { newCar ->
+                if (editingCar == null) cars = cars + newCar else cars = cars.map { if (it.id == newCar.id) newCar else it }
+                saveCars(context, cars)
+                showAddCarDialog = false
+                editingCar = null
+            }
+        )
     }
 
     if (updatingMileageCar != null) {
-        UpdateMileageDialog(currentMileage = updatingMileageCar!!.mileage, onDismiss = { updatingMileageCar = null }, onSave = { newMileage ->
-            cars = cars.map { if (it.id == updatingMileageCar!!.id) it.copy(mileage = newMileage) else it }
-            saveCars(context, cars); updatingMileageCar = null
-        })
+        UpdateMileageDialog(
+            currentMileage = updatingMileageCar!!.mileage,
+            onDismiss = { updatingMileageCar = null },
+            onSave = { newMileage ->
+                cars = cars.map { if (it.id == updatingMileageCar!!.id) it.copy(mileage = newMileage) else it }
+                saveCars(context, cars)
+                updatingMileageCar = null
+            }
+        )
     }
 
     if (infoCar != null) {
-        CarInfoDialog(car = infoCar!!, onDismiss = { infoCar = null }, onEdit = { editingCar = infoCar; showAddCarDialog = true; infoCar = null }, onFillDefaults = { 
-            val currentCar = infoCar!!
-            val template = loadDefaultTemplate(context)
-            val newWorks = template.map { it.copy(id = UUID.randomUUID().toString(), carId = currentCar.id) }
-            works = works.filter { it.carId != currentCar.id } + newWorks
-            saveWorks(context, works); infoCar = null 
-        }, onUpdateMileage = { updatingMileageCar = infoCar; infoCar = null })
+        CarInfoDialog(
+            car = infoCar!!,
+            onDismiss = { infoCar = null },
+            onEdit = { 
+                editingCar = infoCar
+                showAddCarDialog = true
+                infoCar = null 
+            },
+            onFillDefaults = { 
+                val currentCar = infoCar!!
+                val template = loadDefaultTemplate(context)
+                val newWorks = template.map { it.copy(id = UUID.randomUUID().toString(), carId = currentCar.id) }
+                works = works.filter { it.carId != currentCar.id } + newWorks
+                saveWorks(context, works)
+                infoCar = null 
+            },
+            onUpdateMileage = { 
+                updatingMileageCar = infoCar
+                infoCar = null 
+            }
+        )
     }
 
     if (showAddWorkDialog && selectedCar != null) {
@@ -125,22 +192,36 @@ fun AppScreen() {
         val allWorksForSuggestions = (works + defaultWorks).distinctBy { it.name }
         
         AddEditWorkDialog(
-    existingWork = editingWork,
-    allWorks = allWorksForSuggestions,
-    onDismiss = { showAddWorkDialog = false },
-    onSave = { work ->
+            existingWork = editingWork,
+            allWorks = allWorksForSuggestions,
+            onDismiss = { showAddWorkDialog = false },
+            onSave = { work ->
                 val updatedWork = work.copy(carId = selectedCar.id)
                 val isExtraWork = updatedWork.intervalKm == 0 && updatedWork.intervalMonths == 0
                 
                 if (isExtraWork) {
-                    val entry = WorkHistory(carId = selectedCar.id, workName = updatedWork.name, date = updatedWork.lastDate, mileage = updatedWork.lastMileage, notes = updatedWork.notes)
-                    history = history + entry; saveHistory(context, history)
+                    val entry = WorkHistory(
+                        carId = selectedCar.id,
+                        workName = updatedWork.name,
+                        date = updatedWork.lastDate,
+                        mileage = updatedWork.lastMileage,
+                        notes = updatedWork.notes
+                    )
+                    history = history + entry
+                    saveHistory(context, history)
                 } else {
                     works = if (editingWork == null) works + updatedWork else works.map { if (it.id == updatedWork.id) updatedWork else it }
                     saveWorks(context, works)
                     if (updatedWork.hasLastExecution || updatedWork.lastMileage > 0) {
-                        val entry = WorkHistory(carId = selectedCar.id, workName = updatedWork.name, date = updatedWork.lastDate, mileage = updatedWork.lastMileage, notes = updatedWork.notes.ifBlank { "Регламентное ТО" })
-                        history = history + entry; saveHistory(context, history)
+                        val entry = WorkHistory(
+                            carId = selectedCar.id,
+                            workName = updatedWork.name,
+                            date = updatedWork.lastDate,
+                            mileage = updatedWork.lastMileage,
+                            notes = updatedWork.notes.ifBlank { "Регламентное ТО" }
+                        )
+                        history = history + entry
+                        saveHistory(context, history)
                     }
                 }
                 showAddWorkDialog = false
@@ -149,17 +230,43 @@ fun AppScreen() {
     }
 
     if (actionWork != null) {
-        WorkActionsDialog(work = actionWork!!, onDismiss = { actionWork = null },
-            onComplete = { newMileage, newDate, newNotes -> 
+        WorkActionsDialog(
+            work = actionWork!!,
+            onDismiss = { actionWork = null },
+            onComplete = { newMileage, newDate, newNotes ->
                 works = works.map { if (it.id == actionWork!!.id) it.copy(lastMileage = newMileage, lastDate = newDate, hasLastExecution = true, skipped = false) else it }
                 saveWorks(context, works)
-                val entry = WorkHistory(carId = selectedCar!!.id, workName = actionWork!!.name, date = newDate, mileage = newMileage, notes = newNotes.ifBlank { "Регламентное ТО" })
-                history = history + entry; saveHistory(context, history); actionWork = null 
+                val entry = WorkHistory(
+                    carId = selectedCar!!.id,
+                    workName = actionWork!!.name,
+                    date = newDate,
+                    mileage = newMileage,
+                    notes = newNotes.ifBlank { "Регламентное ТО" }
+                )
+                history = history + entry
+                saveHistory(context, history)
+                actionWork = null
             },
-            onSkip = { works = works.map { if (it.id == actionWork!!.id) it.copy(skipped = true) else it }; saveWorks(context, works); actionWork = null },
-            onEdit = { editingWork = actionWork; actionWork = null; showAddWorkDialog = true },
-            onDelete = { works = works.filter { it.id != actionWork!!.id }; saveWorks(context, works); actionWork = null },
-            onNotDone = { works = works.map { if (it.id == actionWork!!.id) it.copy(skipped = false, hasLastExecution = false) else it }; saveWorks(context, works); actionWork = null },
+            onSkip = {
+                works = works.map { if (it.id == actionWork!!.id) it.copy(skipped = true) else it }
+                saveWorks(context, works)
+                actionWork = null
+            },
+            onEdit = {
+                editingWork = actionWork
+                actionWork = null
+                showAddWorkDialog = true
+            },
+            onDelete = {
+                works = works.filter { it.id != actionWork!!.id }
+                saveWorks(context, works)
+                actionWork = null
+            },
+            onNotDone = {
+                works = works.map { if (it.id == actionWork!!.id) it.copy(skipped = false, hasLastExecution = false) else it }
+                saveWorks(context, works)
+                actionWork = null
+            },
             onShowInList = {
                 val isRegulationWork = actionWork!!.intervalKm > 0 || actionWork!!.intervalMonths > 0
                 currentScreen = if (isRegulationWork) "Регламент" else "Работы"
@@ -170,21 +277,48 @@ fun AppScreen() {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun HomeScreenContent(cars: List<Car>, works: List<MaintenanceWork>, history: List<WorkHistory>, selectedCarIndex: Int, onCarSwipe: (Int) -> Unit, onAddCarClick: () -> Unit, onAddWorkClick: () -> Unit, onWorkClick: (MaintenanceWork) -> Unit, onCarClick: (Car) -> Unit) {
+fun HomeScreenContent(
+    cars: List<Car>,
+    works: List<MaintenanceWork>,
+    history: List<WorkHistory>,
+    selectedCarIndex: Int,
+    onCarSwipe: (Int) -> Unit,
+    onAddCarClick: () -> Unit,
+    onAddWorkClick: () -> Unit,
+    onWorkClick: (MaintenanceWork) -> Unit,
+    onCarClick: (Car) -> Unit
+) {
     val selectedCar = cars.getOrNull(selectedCarIndex)
     val carWorks = works.filter { it.carId == selectedCar?.id }
     val carHistory = history.filter { it.carId == selectedCar?.id }
 
-    LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        if (cars.isEmpty()) item { EmptyGarageCard(onAddCarClick) }
-        else {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        if (cars.isEmpty()) {
+            item { EmptyGarageCard(onAddCarClick) }
+        } else {
             item {
                 val pagerState = rememberPagerState(pageCount = { cars.size })
                 LaunchedEffect(pagerState.currentPage) { onCarSwipe(pagerState.currentPage) }
-                HorizontalPager(state = pagerState, pageSpacing = 16.dp) { page -> CarCard(cars[page], onClick = { onCarClick(cars[page]) }) }
+                HorizontalPager(state = pagerState, pageSpacing = 16.dp) { page ->
+                    CarCard(cars[page], onClick = { onCarClick(cars[page]) })
+                }
                 if (cars.size > 1) {
-                    Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.Center) {
-                        repeat(cars.size) { i -> Box(modifier = Modifier.padding(horizontal = 4.dp).size(8.dp).background(if (i == pagerState.currentPage) ColorGreen else TextSecondary.copy(alpha = 0.3f), CircleShape)) }
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        repeat(cars.size) { i ->
+                            Box(
+                                modifier = Modifier
+                                    .padding(horizontal = 4.dp)
+                                    .size(8.dp)
+                                    .background(if (i == pagerState.currentPage) ColorGreen else TextSecondary.copy(alpha = 0.3f), CircleShape)
+                            )
+                        }
                     }
                 }
             }
@@ -206,22 +340,44 @@ fun HomeScreenContent(cars: List<Car>, works: List<MaintenanceWork>, history: Li
             }
         }
         item { Text("Ближайшие работы", color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
-        if (carWorks.isEmpty()) item { Text("Работ пока нет", color = TextSecondary) }
-        else {
+        if (carWorks.isEmpty()) {
+            item { Text("Работ пока нет", color = TextSecondary) }
+        } else {
             items(carWorks.size) { index ->
                 val work = carWorks[index]
                 val status = getWorkStatus(work, selectedCar!!)
-                val statusColor = when(status) { "Требуется", "Необходимо выполнить" -> ColorRed; "Пропущена" -> ColorPurple; "Скоро" -> ColorYellow; else -> ColorGreen }
+                val statusColor = when (status) {
+                    "Требуется", "Необходимо выполнить" -> ColorRed
+                    "Пропущена" -> ColorPurple
+                    "Скоро" -> ColorYellow
+                    else -> ColorGreen
+                }
                 val currentMileage = selectedCar.mileage.toIntOrNull() ?: 0
-                WorkItemCard(work.name, status, statusColor, work.intervalKm, work.intervalMonths, work.lastMileage, currentMileage, work.name.startsWith("ГБО:")) { onWorkClick(work) }
+                WorkItemCard(
+                    name = work.name,
+                    status = status,
+                    statusColor = statusColor,
+                    intervalKm = work.intervalKm,
+                    intervalMonths = work.intervalMonths,
+                    lastMileage = work.lastMileage,
+                    currentCarMileage = currentMileage,
+                    isLpg = work.name.startsWith("ГБО:")
+                ) { onWorkClick(work) }
             }
         }
     }
 }
 
 @Composable
-fun HistoryScreen(history: List<WorkHistory>, selectedCar: Car?, onAddWorkClick: () -> Unit) {
-    if (selectedCar == null) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Сначала добавьте авто", color = TextSecondary) }; return }
+fun HistoryScreen(
+    history: List<WorkHistory>,
+    selectedCar: Car?,
+    onAddWorkClick: () -> Unit
+) {
+    if (selectedCar == null) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Сначала добавьте авто", color = TextSecondary) }
+        return
+    }
     val sortedHistory = history.sortedByDescending { it.date }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
@@ -234,7 +390,11 @@ fun HistoryScreen(history: List<WorkHistory>, selectedCar: Car?, onAddWorkClick:
                 items(sortedHistory.size) { index ->
                     val record = sortedHistory[index]
                     val dateStr = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(Date(record.date))
-                    Card(colors = CardDefaults.cardColors(containerColor = CardColor), shape = RoundedCornerShape(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = CardColor),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
                         Column(modifier = Modifier.padding(12.dp)) {
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text(record.workName, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
@@ -251,13 +411,27 @@ fun HistoryScreen(history: List<WorkHistory>, selectedCar: Car?, onAddWorkClick:
                 }
             }
         }
-        Button(onClick = onAddWorkClick, modifier = Modifier.fillMaxWidth().padding(top = 8.dp), colors = ButtonDefaults.buttonColors(containerColor = ColorPurple)) { Text("Добавить запись (ремонт)", color = TextPrimary) }
+        Button(
+            onClick = onAddWorkClick,
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = ColorPurple)
+        ) {
+            Text("Добавить запись (ремонт)", color = TextPrimary)
+        }
     }
 }
 
 @Composable
-fun RegulationScreen(works: List<MaintenanceWork>, selectedCar: Car?, onWorkClick: (MaintenanceWork) -> Unit, onAddClick: (Boolean) -> Unit) {
-    if (selectedCar == null) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Сначала добавьте авто", color = TextSecondary) }; return }
+fun RegulationScreen(
+    works: List<MaintenanceWork>,
+    selectedCar: Car?,
+    onWorkClick: (MaintenanceWork) -> Unit,
+    onAddClick: (Boolean) -> Unit
+) {
+    if (selectedCar == null) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Сначала добавьте авто", color = TextSecondary) }
+        return
+    }
     
     val regularWorks = works.filter { !it.name.startsWith("ГБО:") }
     val lpgWorks = works.filter { it.name.startsWith("ГБО:") }
@@ -272,7 +446,11 @@ fun RegulationScreen(works: List<MaintenanceWork>, selectedCar: Car?, onWorkClic
     val okLpg = lpgWorks.filter { getWorkStatus(it, selectedCar) == "Выполнено" }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        LazyColumn(modifier = Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        LazyColumn(
+            modifier = Modifier.weight(1f),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
             item { Text("Регламент: ${selectedCar.brand} ${selectedCar.model} (${selectedCar.mileage} км)", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold) }
 
             item { 
@@ -283,17 +461,55 @@ fun RegulationScreen(works: List<MaintenanceWork>, selectedCar: Car?, onWorkClic
             }
             if (reqRegular.isNotEmpty()) {
                 item { RegulationHeader("Требуют внимания", ColorRed) }
-                items(reqRegular.size) { i -> val w = reqRegular[i]; WorkItemCard(w.name, getWorkStatus(w, selectedCar), if (getWorkStatus(w, selectedCar) == "Пропущена") ColorPurple else ColorRed, w.intervalKm, w.intervalMonths, w.lastMileage, currentMileage, false) { onWorkClick(w) } }
+                items(reqRegular.size) { i ->
+                    val w = reqRegular[i]
+                    WorkItemCard(
+                        name = w.name,
+                        status = getWorkStatus(w, selectedCar),
+                        statusColor = if (getWorkStatus(w, selectedCar) == "Пропущена") ColorPurple else ColorRed,
+                        intervalKm = w.intervalKm,
+                        intervalMonths = w.intervalMonths,
+                        lastMileage = w.lastMileage,
+                        currentCarMileage = currentMileage,
+                        isLpg = false
+                    ) { onWorkClick(w) }
+                }
             }
             if (soonRegular.isNotEmpty()) {
                 item { RegulationHeader("Скоро", ColorYellow) }
-                items(soonRegular.size) { i -> val w = soonRegular[i]; WorkItemCard(w.name, getWorkStatus(w, selectedCar), ColorYellow, w.intervalKm, w.intervalMonths, w.lastMileage, currentMileage, false) { onWorkClick(w) } }
+                items(soonRegular.size) { i ->
+                    val w = soonRegular[i]
+                    WorkItemCard(
+                        name = w.name,
+                        status = getWorkStatus(w, selectedCar),
+                        statusColor = ColorYellow,
+                        intervalKm = w.intervalKm,
+                        intervalMonths = w.intervalMonths,
+                        lastMileage = w.lastMileage,
+                        currentCarMileage = currentMileage,
+                        isLpg = false
+                    ) { onWorkClick(w) }
+                }
             }
             if (okRegular.isNotEmpty()) {
                 item { RegulationHeader("В порядке", ColorGreen) }
-                items(okRegular.size) { i -> val w = okRegular[i]; WorkItemCard(w.name, getWorkStatus(w, selectedCar), ColorGreen, w.intervalKm, w.intervalMonths, w.lastMileage, currentMileage, false) { onWorkClick(w) } }
+                items(okRegular.size) { i ->
+                    val w = okRegular[i]
+                    WorkItemCard(
+                        name = w.name,
+                        status = getWorkStatus(w, selectedCar),
+                        statusColor = ColorGreen,
+                        intervalKm = w.intervalKm,
+                        intervalMonths = w.intervalMonths,
+                        lastMileage = w.lastMileage,
+                        currentCarMileage = currentMileage,
+                        isLpg = false
+                    ) { onWorkClick(w) }
+                }
             }
-            if (regularWorks.isEmpty()) item { Text("Нет работ по автомобилю", color = TextSecondary, fontSize = 14.sp, modifier = Modifier.padding(start = 16.dp)) }
+            if (regularWorks.isEmpty()) {
+                item { Text("Нет работ по автомобилю", color = TextSecondary, fontSize = 14.sp, modifier = Modifier.padding(start = 16.dp)) }
+            }
 
             item { 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 16.dp)) {
@@ -303,17 +519,55 @@ fun RegulationScreen(works: List<MaintenanceWork>, selectedCar: Car?, onWorkClic
             }
             if (reqLpg.isNotEmpty()) {
                 item { RegulationHeader("Требуют внимания", ColorRed) }
-                items(reqLpg.size) { i -> val w = reqLpg[i]; WorkItemCard(w.name, getWorkStatus(w, selectedCar), if (getWorkStatus(w, selectedCar) == "Пропущена") ColorPurple else ColorRed, w.intervalKm, w.intervalMonths, w.lastMileage, currentMileage, true) { onWorkClick(w) } }
+                items(reqLpg.size) { i ->
+                    val w = reqLpg[i]
+                    WorkItemCard(
+                        name = w.name,
+                        status = getWorkStatus(w, selectedCar),
+                        statusColor = if (getWorkStatus(w, selectedCar) == "Пропущена") ColorPurple else ColorRed,
+                        intervalKm = w.intervalKm,
+                        intervalMonths = w.intervalMonths,
+                        lastMileage = w.lastMileage,
+                        currentCarMileage = currentMileage,
+                        isLpg = true
+                    ) { onWorkClick(w) }
+                }
             }
             if (soonLpg.isNotEmpty()) {
                 item { RegulationHeader("Скоро", ColorYellow) }
-                items(soonLpg.size) { i -> val w = soonLpg[i]; WorkItemCard(w.name, getWorkStatus(w, selectedCar), ColorYellow, w.intervalKm, w.intervalMonths, w.lastMileage, currentMileage, true) { onWorkClick(w) } }
+                items(soonLpg.size) { i ->
+                    val w = soonLpg[i]
+                    WorkItemCard(
+                        name = w.name,
+                        status = getWorkStatus(w, selectedCar),
+                        statusColor = ColorYellow,
+                        intervalKm = w.intervalKm,
+                        intervalMonths = w.intervalMonths,
+                        lastMileage = w.lastMileage,
+                        currentCarMileage = currentMileage,
+                        isLpg = true
+                    ) { onWorkClick(w) }
+                }
             }
             if (okLpg.isNotEmpty()) {
                 item { RegulationHeader("В порядке", ColorGreen) }
-                items(okLpg.size) { i -> val w = okLpg[i]; WorkItemCard(w.name, getWorkStatus(w, selectedCar), ColorGreen, w.intervalKm, w.intervalMonths, w.lastMileage, currentMileage, true) { onWorkClick(w) } }
+                items(okLpg.size) { i ->
+                    val w = okLpg[i]
+                    WorkItemCard(
+                        name = w.name,
+                        status = getWorkStatus(w, selectedCar),
+                        statusColor = ColorGreen,
+                        intervalKm = w.intervalKm,
+                        intervalMonths = w.intervalMonths,
+                        lastMileage = w.lastMileage,
+                        currentCarMileage = currentMileage,
+                        isLpg = true
+                    ) { onWorkClick(w) }
+                }
             }
-            if (lpgWorks.isEmpty()) item { Text("Нет работ по ГБО", color = TextSecondary, fontSize = 14.sp, modifier = Modifier.padding(start = 16.dp)) }
+            if (lpgWorks.isEmpty()) {
+                item { Text("Нет работ по ГБО", color = TextSecondary, fontSize = 14.sp, modifier = Modifier.padding(start = 16.dp)) }
+            }
         }
     }
 }
@@ -328,8 +582,16 @@ fun RegulationHeader(title: String, color: Color) {
 }
 
 @Composable
-fun StatisticsScreen(works: List<MaintenanceWork>, history: List<WorkHistory>, selectedCar: Car?, onWorkClick: (MaintenanceWork) -> Unit) {
-    if (selectedCar == null) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Сначала добавьте авто", color = TextSecondary) }; return }
+fun StatisticsScreen(
+    works: List<MaintenanceWork>,
+    history: List<WorkHistory>,
+    selectedCar: Car?,
+    onWorkClick: (MaintenanceWork) -> Unit
+) {
+    if (selectedCar == null) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Сначала добавьте авто", color = TextSecondary) }
+        return
+    }
     
     val requires = works.count { getWorkStatus(it, selectedCar) == "Требуется" || getWorkStatus(it, selectedCar) == "Необходимо выполнить" }
     val soon = works.count { getWorkStatus(it, selectedCar) == "Скоро" }
@@ -339,7 +601,10 @@ fun StatisticsScreen(works: List<MaintenanceWork>, history: List<WorkHistory>, s
     val plannedHistory = history.count { it.notes == "Регламентное ТО" || it.notes.isBlank() }
     val extraHistory = totalHistory - plannedHistory
 
-    LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
         item { Text("Аналитика: ${selectedCar.brand} ${selectedCar.model}", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold) }
 
         item { Text("Состояние регламента", color = TextSecondary, fontSize = 14.sp, fontWeight = FontWeight.Bold) }
@@ -353,7 +618,11 @@ fun StatisticsScreen(works: List<MaintenanceWork>, history: List<WorkHistory>, s
 
         item { Text("Журнал работ (всего: $totalHistory)", color = TextSecondary, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp)) }
         item {
-            Card(colors = CardDefaults.cardColors(containerColor = CardColor), shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth()) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = CardColor),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text("Плановые ТО:", color = TextPrimary)
@@ -378,7 +647,11 @@ fun StatisticsScreen(works: List<MaintenanceWork>, history: List<WorkHistory>, s
             items(recentHistory.size) { index ->
                 val record = recentHistory[index]
                 val dateStr = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(Date(record.date))
-                Card(colors = CardDefaults.cardColors(containerColor = CardColor), shape = RoundedCornerShape(8.dp), modifier = Modifier.fillMaxWidth()) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = CardColor),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Column(modifier = Modifier.padding(12.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text(record.workName, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
