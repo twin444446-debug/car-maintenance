@@ -13,9 +13,8 @@ fun loadCars(context: Context): List<Car> {
         for (i in 0 until array.length()) {
             val o = array.getJSONObject(i)
             list.add(Car(o.optLong("id"), o.optString("brand"), o.optString("model"),
-                o.optString("year"), o.optString("vin"), o.optString("mileage"),
-                o.optString("engine"), o.optString("fuel"), o.optBoolean("hasLpg"), o.optString("notes")))
-        }
+    o.optString("year"), o.optString("vin"), o.optString("mileage"),
+    o.optString("engine"), o.optString("fuel"), o.optBoolean("hasLpg"), o.optString("notes"), o.optString("imageUri")))
     } catch (e: Exception) { e.printStackTrace() }
     return list
 }
@@ -28,7 +27,7 @@ fun saveCars(context: Context, cars: List<Car>) {
         o.put("id", car.id); o.put("brand", car.brand); o.put("model", car.model)
         o.put("year", car.year); o.put("vin", car.vin); o.put("mileage", car.mileage)
         o.put("engine", car.engine); o.put("fuel", car.fuel); o.put("hasLpg", car.hasLpg)
-        o.put("notes", car.notes)
+        o.put("imageUri", car.imageUri)
         array.put(o)
     }
     prefs.edit().putString("cars", array.toString()).apply()
