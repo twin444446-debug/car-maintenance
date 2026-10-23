@@ -1,5 +1,9 @@
 package com.example.carmaintenance
+
 import android.app.DatePickerDialog
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -22,46 +26,45 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
+// === ДИАЛОГ ДОБАВЛЕНИЯ/РЕДАКТИРОВАНИЯ АВТО С ФОТО ===
 @Composable
-fun AddCarDialog(onDismiss: () -> Unit, onSave: (Car) -> Unit) {
-    var brand by remember { mutableStateOf("") }
-    var model by remember { mutableStateOf("") }
-    var year by remember { mutableStateOf("") }
-    var mileage by remember { mutableStateOf("") }
-    var vin by remember { mutableStateOf("") }
-    var engine by remember { mutableStateOf("") }
-    var hasLpg by remember { mutableStateOf(false) }
+fun AddCarDialog(existingCar: Car? = null, onDismiss: () -> Unit, onSave: (Car) -> Unit) {
+    var brand by remember { mutableStateOf(existingCar?.brand ?: "") }
+    var model by remember { mutableStateOf(existingCar?.model ?: "") }
+    var year by remember { mutableStateOf(existingCar?.year ?: "") }
+    var mileage by remember { mutableStateOf(existingCar?.mileage ?: "") }
+    var vin by remember { mutableStateOf(existingCar?.vin ?: "") }
+    var engine by remember { mutableStateOf(existingCar?.engine ?: "") }
+    var hasLpg by remember { mutableStateOf(existingCar?.hasLpg ?: false) }
+    var imageUri by remember { mutableStateOf(existingCar?.imageUri ?: "") }
 
     var attemptedSave by remember { mutableStateOf(false) }
     val isBrandError = attemptedSave && brand.isBlank()
     val isModelError = attemptedSave && model.isBlank()
 
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? -> if (uri != null) imageUri = uri.toString() }
+
     AlertDialog(
         onDismissRequest = onDismiss, 
         containerColor = CardColor, 
-        title = { Text("Новый автомобиль", color = TextPrimary) },
+        title = { Text(if (existingCar == null) "Новый автомобиль" else "Редактировать авто", color = TextPrimary) },
         text = {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedTextField(
-                    value = brand, onValueChange = { brand = it; if(attemptedSave) attemptedSave = brand.isBlank() || model.isBlank() }, 
-                    label = { Text("Марка *") }, singleLine = true, isError = isBrandError,
-                    supportingText = { if (isBrandError) Text("Обязательное поле", color = ColorRed) },
-                    colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary, errorTextColor = ColorRed, errorBorderColor = ColorRed, errorLabelColor = ColorRed)
-                )
-                OutlinedTextField(
-                    value = model, onValueChange = { model = it; if(attemptedSave) attemptedSave = brand.isBlank() || model.isBlank() }, 
-                    label = { Text("Модель *") }, singleLine = true, isError = isModelError,
-                    supportingText = { if (isModelError) Text("Обязательное поле", color = ColorRed) },
-                    colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary, errorTextColor = ColorRed, errorBorderColor = ColorRed, errorLabelColor = ColorRed)
-                )
+            Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = { imagePickerLauncher.launch("image/*") }, 
+                    modifier = Modifier.fillMaxWidth(), 
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E2A45))
+                ) {
+                    Text(if (imageUri.isEmpty()) "Выбрать фото" else "Фото выбрано ✓", color = TextPrimary)
+                }
+                OutlinedTextField(value = brand, onValueChange = { brand = it; if(attemptedSave) attemptedSave = brand.isBlank() || model.isBlank() }, label = { Text("Марка *") }, singleLine = true, isError = isBrandError, supportingText = { if (isBrandError) Text("Обязательное поле", color = ColorRed) }, colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary, errorTextColor = ColorRed, errorBorderColor = ColorRed, errorLabelColor = ColorRed))
+                OutlinedTextField(value = model, onValueChange = { model = it; if(attemptedSave) attemptedSave = brand.isBlank() || model.isBlank() }, label = { Text("Модель *") }, singleLine = true, isError = isModelError, supportingText = { if (isModelError) Text("Обязательное поле", color = ColorRed) }, colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary, errorTextColor = ColorRed, errorBorderColor = ColorRed, errorLabelColor = ColorRed))
                 OutlinedTextField(value = year, onValueChange = { year = it }, label = { Text("Год выпуска") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
                 OutlinedTextField(value = mileage, onValueChange = { mileage = it }, label = { Text("Пробег (км)") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
                 OutlinedTextField(value = vin, onValueChange = { vin = it }, label = { Text("VIN-код") }, singleLine = true, colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
-                OutlinedTextField(value = engine, onValueChange = { engine = it }, label = { Text("Двигатель (например, 1.4)") }, singleLine = true, colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
-                
+                OutlinedTextField(value = engine, onValueChange = { engine = it }, label = { Text("Двигатель") }, singleLine = true, colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(checked = hasLpg, onCheckedChange = { hasLpg = it }, colors = CheckboxDefaults.colors(checkedColor = ColorGreen))
                     Text("Установлено ГБО (Газ)", color = TextSecondary, fontSize = 14.sp)
@@ -72,16 +75,15 @@ fun AddCarDialog(onDismiss: () -> Unit, onSave: (Car) -> Unit) {
             TextButton(onClick = { 
                 if (brand.isNotBlank() && model.isNotBlank()) {
                     val fuelType = if (hasLpg) "Бензин/Газ" else "Бензин"
-                    onSave(Car(System.currentTimeMillis(), brand, model, year, vin, mileage, engine, fuelType, hasLpg, ""))
-                } else {
-                    attemptedSave = true
-                }
+                    onSave(Car(existingCar?.id ?: System.currentTimeMillis(), brand, model, year, vin, mileage, engine, fuelType, hasLpg, existingCar?.notes ?: "", imageUri))
+                } else attemptedSave = true
             }) { Text("Сохранить", color = ColorGreen) } 
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена", color = TextSecondary) } }
     )
 }
 
+// === ДИАЛОГ ДОБАВЛЕНИЯ/РЕДАКТИРОВАНИЯ РАБОТЫ ===
 @Composable
 fun AddEditWorkDialog(existingWork: MaintenanceWork?, onDismiss: () -> Unit, onSave: (MaintenanceWork) -> Unit) {
     val context = LocalContext.current
@@ -145,6 +147,7 @@ fun AddEditWorkDialog(existingWork: MaintenanceWork?, onDismiss: () -> Unit, onS
     )
 }
 
+// === ДИАЛОГ ДЕЙСТВИЙ (НОВЫЙ СТИЛЬ: ТОЧКИ) ===
 @Composable
 fun WorkActionsDialog(work: MaintenanceWork, onDismiss: () -> Unit, onComplete: (Int) -> Unit, onSkip: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit) {
     var showCompleteInput by remember { mutableStateOf(false) }
