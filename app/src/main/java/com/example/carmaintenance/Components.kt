@@ -93,8 +93,9 @@ fun SpecItem(icon: androidx.compose.ui.graphics.vector.ImageVector, label: Strin
     }
 }
 
+// === ОБНОВЛЕННАЯ КАРТОЧКА РАБОТЫ С БЕЙДЖЕМ ГБО ===
 @Composable 
-fun WorkItemCard(name: String, status: String, statusColor: Color, intervalKm: Int, intervalMonths: Int, lastMileage: Int, currentCarMileage: Int, onClick: () -> Unit) {
+fun WorkItemCard(name: String, status: String, statusColor: Color, intervalKm: Int, intervalMonths: Int, lastMileage: Int, currentCarMileage: Int, isLpg: Boolean, onClick: () -> Unit) {
     val periodText = buildString {
         if (intervalKm > 0) append("$intervalKm км")
         if (intervalKm > 0 && intervalMonths > 0) append(" / ")
@@ -120,7 +121,16 @@ fun WorkItemCard(name: String, status: String, statusColor: Color, intervalKm: I
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(name, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(name, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        // БЕЙДЖ ГБО
+                        if (isLpg) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Surface(color = ColorBlue.copy(alpha = 0.2f), shape = RoundedCornerShape(4.dp)) { 
+                                Text("ГБО", color = ColorBlue, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)) 
+                            }
+                        }
+                    }
                     Spacer(modifier = Modifier.height(4.dp))
                     Text("Периодичность: $periodText", color = TextSecondary, fontSize = 12.sp)
                 }
