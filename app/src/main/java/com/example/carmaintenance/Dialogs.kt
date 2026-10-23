@@ -67,6 +67,7 @@ fun AddCarDialog(existingCar: Car? = null, onDismiss: () -> Unit, onSave: (Car) 
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddEditWorkDialog(existingWork: MaintenanceWork?, allWorks: List<MaintenanceWork>, onDismiss: () -> Unit, onSave: (MaintenanceWork) -> Unit) {
     val context = LocalContext.current
@@ -88,6 +89,7 @@ fun AddEditWorkDialog(existingWork: MaintenanceWork?, allWorks: List<Maintenance
 
     var attemptedSave by remember { mutableStateOf(false) }
     val isNameError = attemptedSave && name.isBlank()
+    
     var expanded by remember { mutableStateOf(false) }
     val filteredSuggestions = allWorks.filter { it.name.contains(name, ignoreCase = true) && it.name != name }
 
@@ -111,19 +113,38 @@ fun AddEditWorkDialog(existingWork: MaintenanceWork?, allWorks: List<Maintenance
                     }
                 }
 
-                Box {
+                ExposedDropdownMenuBox(
+                    expanded = expanded && filteredSuggestions.isNotEmpty(),
+                    onExpandedChange = { expanded = it },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     OutlinedTextField(
-                        value = name, onValueChange = { name = it; expanded = it.isNotBlank(); if(attemptedSave) attemptedSave = name.isBlank() }, 
-                        label = { Text("Название *") }, singleLine = true, isError = isNameError, 
-                        supportingText = { if (isNameError) Text("Обязательное поле", color = ColorRed) }, 
-                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary, errorTextColor = ColorRed, errorBorderColor = ColorRed, errorLabelColor = ColorRed),
-                        modifier = Modifier.fillMaxWidth()
+                        value = name,
+                        onValueChange = { 
+                            name = it
+                            if(attemptedSave) attemptedSave = name.isBlank()
+                        },
+                        label = { Text("Название *") },
+                        singleLine = true,
+                        isError = isNameError,
+                        supportingText = { if (isNameError) Text("Обязательное поле", color = ColorRed) },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary, 
+                            errorTextColor = ColorRed, errorBorderColor = ColorRed, errorLabelColor = ColorRed,
+                            focusedContainerColor = CardColor, unfocusedContainerColor = CardColor
+                        ),
+                        modifier = Modifier.fillMaxWidth().menuAnchor()
                     )
-                    DropdownMenu(expanded = expanded && filteredSuggestions.isNotEmpty(), onDismissRequest = { expanded = false }, modifier = Modifier.background(CardColor)) {
+                    
+                    ExposedDropdownMenu(
+                        expanded = expanded && filteredSuggestions.isNotEmpty(),
+                        onDismissRequest = { expanded = false },
+                        modifier = Modifier.background(CardColor)
+                    ) {
                         filteredSuggestions.forEach { suggestion ->
                             DropdownMenuItem(
-                                text = { Text(suggestion.name, color = TextPrimary) }, 
-                                onClick = { 
+                                text = { Text(suggestion.name, color = TextPrimary) },
+                                onClick = {
                                     name = suggestion.name
                                     if (suggestion.intervalKm > 0) intervalKm = suggestion.intervalKm.toString()
                                     if (suggestion.intervalMonths > 0) intervalMonths = suggestion.intervalMonths.toString()
