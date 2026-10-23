@@ -11,5 +11,16 @@ data class MaintenanceWork(
     var intervalKm: Int, var intervalMonths: Int,
     var lastMileage: Int = 0, var lastDate: Long = 0L,
     var hasLastExecution: Boolean = false, var skipped: Boolean = false,
-    var preventive: Boolean = false
+    var preventive: Boolean = false,
+    var notes: String = "" // Поле для примечаний
+)
+
+// Класс для журнала выполненных работ
+data class WorkHistory(
+    val id: Long,
+    val carId: Long,
+    val workName: String,
+    val date: Long,
+    val mileage: Int,
+    val notes: String
 )
