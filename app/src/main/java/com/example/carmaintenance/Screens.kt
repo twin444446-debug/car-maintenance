@@ -463,6 +463,56 @@ fun TemplateEditorScreen(onBack: () -> Unit) {
 }
 
 @Composable
+fun TemplateEditorScreen(onBack: () -> Unit) {
+    val context = LocalContext.current
+    var templateWorks by remember { mutableStateOf(loadDefaultTemplate(context)) }
+    var showAddDialog by remember { mutableStateOf(false) }
+
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text("Шаблон регламента", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Назад", tint = TextPrimary) }
+        }
+        
+        LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(templateWorks.size) { index ->
+                val work = templateWorks[index]
+                Card(colors = CardDefaults.cardColors(containerColor = CardColor), shape = RoundedCornerShape(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(work.name, color = TextPrimary, fontWeight = FontWeight.Bold)
+                            Text("Интервал: ${work.intervalKm} км / ${work.intervalMonths} мес", color = TextSecondary, fontSize = 12.sp)
+                        }
+                        IconButton(onClick = { 
+                            templateWorks = templateWorks.filter { it.id != work.id }
+                            saveDefaultTemplate(context, templateWorks)
+                        }) { Icon(Icons.Default.Delete, null, tint = ColorRed) }
+                    }
+                }
+            }
+        }
+        
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { showAddDialog = true }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = ColorGreen)) {
+                Text("Добавить", color = TextPrimary)
+            }
+        }
+    }
+
+    if (showAddDialog) {
+        AddTemplateWorkDialog(
+            existingWork = null,
+            onDismiss = { showAddDialog = false },
+            onSave = { newWork ->
+                templateWorks = templateWorks + newWork
+                saveDefaultTemplate(context, templateWorks)
+                showAddDialog = false
+            }
+        )
+    }
+}
+
+@Composable
 fun AddTemplateWorkDialog(existingWork: MaintenanceWork?, onDismiss: () -> Unit, onSave: (MaintenanceWork) -> Unit) {
     var name by remember { mutableStateOf(existingWork?.name ?: "") }
     var intervalKm by remember { mutableStateOf(existingWork?.intervalKm?.toString() ?: "") }
