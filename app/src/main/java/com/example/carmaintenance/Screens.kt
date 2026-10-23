@@ -101,10 +101,14 @@ fun AppScreen() {
     }
 
     if (showAddWorkDialog && selectedCar != null) {
-        val allNames = (works.map { it.name } + getDefaultWorks(selectedCar.id).map { it.name } + getLpgDefaultWorks(selectedCar.id).map { it.name }).distinct()
+        val defaultWorks = getDefaultWorks(selectedCar.id) + getLpgDefaultWorks(selectedCar.id)
+        val allWorksForSuggestions = (works + defaultWorks).distinctBy { it.name }
         
         AddEditWorkDialog(
-            existingWork = editingWork, existingNames = allNames, onDismiss = { showAddWorkDialog = false }, onSave = { work ->
+            existingWork = editingWork, 
+            allWorks = allWorksForSuggestions, 
+            onDismiss = { showAddWorkDialog = false }, 
+            onSave = { work ->
                 val updatedWork = work.copy(carId = selectedCar.id)
                 val isExtraWork = updatedWork.intervalKm == 0 && updatedWork.intervalMonths == 0
                 
