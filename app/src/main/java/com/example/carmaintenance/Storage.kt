@@ -78,3 +78,34 @@ fun saveHistory(context: Context, history: List<WorkHistory>) {
     }
     prefs.edit().putString("history", array.toString()).apply()
 }
+
+// Функции для редактора шаблона
+fun loadDefaultTemplate(context: Context): List<MaintenanceWork> {
+    val prefs = context.getSharedPreferences("car_maintenance", Context.MODE_PRIVATE)
+    val jsonStr = prefs.getString("default_template", null)
+    if (jsonStr == null) {
+        val initial = getDefaultWorks(0L) + getLpgDefaultWorks(0L)
+        saveDefaultTemplate(context, initial)
+        return initial
+    }
+    val list = mutableListOf<MaintenanceWork>()
+    try {
+        val array = JSONArray(jsonStr)
+        for (i in 0 until array.length()) {
+            val o = array.getJSONObject(i)
+            list.add(MaintenanceWork(o.optLong("id"), 0L, o.optString("name"), o.optInt("intervalKm"), o.optInt("intervalMonths"), 0, 0, false, false, o.optBoolean("preventive"), o.optString("notes")))
+        }
+    } catch (e: Exception) { e.printStackTrace() }
+    return list
+}
+
+fun saveDefaultTemplate(context: Context, works: List<MaintenanceWork>) {
+    val prefs = context.getSharedPreferences("car_maintenance", Context.MODE_PRIVATE)
+    val array = JSONArray()
+    works.forEach { work ->
+        val o = JSONObject()
+        o.put("id", work.id); o.put("name", work.name); o.put("intervalKm", work.intervalKm); o.put("intervalMonths", work.intervalMonths); o.put("preventive", work.preventive); o.put("notes", work.notes)
+        array.put(o)
+    }
+    prefs.edit().putString("default_template", array.toString()).apply()
+}
