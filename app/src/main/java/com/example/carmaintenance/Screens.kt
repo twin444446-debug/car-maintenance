@@ -156,7 +156,8 @@ fun HomeScreenContent(cars: List<Car>, works: List<MaintenanceWork>, selectedCar
                 val work = carWorks[index]
                 val status = getWorkStatus(work, selectedCar!!)
                 val statusColor = when(status) { "Требуется", "Необходимо выполнить" -> ColorRed; "Пропущена" -> ColorPurple; "Скоро" -> ColorYellow; else -> ColorGreen }
-                WorkItemCard(work.name, status, statusColor, work.intervalKm, work.intervalMonths) { onWorkClick(work) }
+                val currentMileage = selectedCar.mileage.toIntOrNull() ?: 0
+                WorkItemCard(work.name, status, statusColor, work.intervalKm, work.intervalMonths, work.lastMileage, currentMileage) { onWorkClick(work) }
             }
         }
     }
@@ -185,7 +186,8 @@ fun WorkListScreen(works: List<MaintenanceWork>, selectedCar: Car?, onAddClick: 
                     val work = filteredWorks[index]
                     val status = getWorkStatus(work, selectedCar)
                     val statusColor = when(status) { "Требуется", "Необходимо выполнить" -> ColorRed; "Пропущена" -> ColorPurple; "Скоро" -> ColorYellow; else -> ColorGreen }
-                    WorkItemCard(work.name, status, statusColor, work.intervalKm, work.intervalMonths) { }
+                    val currentMileage = selectedCar.mileage.toIntOrNull() ?: 0
+                    WorkItemCard(work.name, status, statusColor, work.intervalKm, work.intervalMonths, work.lastMileage, currentMileage) { }
                 }
             }
         }
@@ -199,6 +201,7 @@ fun RegulationScreen(works: List<MaintenanceWork>, selectedCar: Car?, onWorkClic
     
     val regularWorks = works.filter { !it.name.startsWith("ГБО:") }
     val lpgWorks = works.filter { it.name.startsWith("ГБО:") }
+    val currentMileage = selectedCar.mileage.toIntOrNull() ?: 0
 
     val reqRegular = regularWorks.filter { getWorkStatus(it, selectedCar) == "Требуется" || getWorkStatus(it, selectedCar) == "Необходимо выполнить" || getWorkStatus(it, selectedCar) == "Пропущена" }
     val soonRegular = regularWorks.filter { getWorkStatus(it, selectedCar) == "Скоро" }
@@ -210,21 +213,21 @@ fun RegulationScreen(works: List<MaintenanceWork>, selectedCar: Car?, onWorkClic
 
     Column(modifier = Modifier.fillMaxSize()) {
         LazyColumn(modifier = Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            item { Text("Регламент: ${selectedCar.brand} ${selectedCar.model}", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold) }
+            item { Text("Регламент: ${selectedCar.brand} ${selectedCar.model} (${selectedCar.mileage} км)", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold) }
 
             if (regularWorks.isNotEmpty()) {
                 item { Text("🚗 Автомобиль", color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp)) }
                 if (reqRegular.isNotEmpty()) {
                     item { RegulationHeader("Требуют внимания", ColorRed) }
-                    items(reqRegular.size) { i -> val w = reqRegular[i]; WorkItemCard(w.name, getWorkStatus(w, selectedCar), if (getWorkStatus(w, selectedCar) == "Пропущена") ColorPurple else ColorRed, w.intervalKm, w.intervalMonths) { onWorkClick(w) } }
+                    items(reqRegular.size) { i -> val w = reqRegular[i]; WorkItemCard(w.name, getWorkStatus(w, selectedCar), if (getWorkStatus(w, selectedCar) == "Пропущена") ColorPurple else ColorRed, w.intervalKm, w.intervalMonths, w.lastMileage, currentMileage) { onWorkClick(w) } }
                 }
                 if (soonRegular.isNotEmpty()) {
                     item { RegulationHeader("Скоро", ColorYellow) }
-                    items(soonRegular.size) { i -> val w = soonRegular[i]; WorkItemCard(w.name, getWorkStatus(w, selectedCar), ColorYellow, w.intervalKm, w.intervalMonths) { onWorkClick(w) } }
+                    items(soonRegular.size) { i -> val w = soonRegular[i]; WorkItemCard(w.name, getWorkStatus(w, selectedCar), ColorYellow, w.intervalKm, w.intervalMonths, w.lastMileage, currentMileage) { onWorkClick(w) } }
                 }
                 if (okRegular.isNotEmpty()) {
                     item { RegulationHeader("В порядке", ColorGreen) }
-                    items(okRegular.size) { i -> val w = okRegular[i]; WorkItemCard(w.name, getWorkStatus(w, selectedCar), ColorGreen, w.intervalKm, w.intervalMonths) { onWorkClick(w) } }
+                    items(okRegular.size) { i -> val w = okRegular[i]; WorkItemCard(w.name, getWorkStatus(w, selectedCar), ColorGreen, w.intervalKm, w.intervalMonths, w.lastMileage, currentMileage) { onWorkClick(w) } }
                 }
             }
 
@@ -232,15 +235,15 @@ fun RegulationScreen(works: List<MaintenanceWork>, selectedCar: Car?, onWorkClic
                 item { Text("⛽ ГБО", color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 16.dp)) }
                 if (reqLpg.isNotEmpty()) {
                     item { RegulationHeader("Требуют внимания", ColorRed) }
-                    items(reqLpg.size) { i -> val w = reqLpg[i]; WorkItemCard(w.name, getWorkStatus(w, selectedCar), if (getWorkStatus(w, selectedCar) == "Пропущена") ColorPurple else ColorRed, w.intervalKm, w.intervalMonths) { onWorkClick(w) } }
+                    items(reqLpg.size) { i -> val w = reqLpg[i]; WorkItemCard(w.name, getWorkStatus(w, selectedCar), if (getWorkStatus(w, selectedCar) == "Пропущена") ColorPurple else ColorRed, w.intervalKm, w.intervalMonths, w.lastMileage, currentMileage) { onWorkClick(w) } }
                 }
                 if (soonLpg.isNotEmpty()) {
                     item { RegulationHeader("Скоро", ColorYellow) }
-                    items(soonLpg.size) { i -> val w = soonLpg[i]; WorkItemCard(w.name, getWorkStatus(w, selectedCar), ColorYellow, w.intervalKm, w.intervalMonths) { onWorkClick(w) } }
+                    items(soonLpg.size) { i -> val w = soonLpg[i]; WorkItemCard(w.name, getWorkStatus(w, selectedCar), ColorYellow, w.intervalKm, w.intervalMonths, w.lastMileage, currentMileage) { onWorkClick(w) } }
                 }
                 if (okLpg.isNotEmpty()) {
                     item { RegulationHeader("В порядке", ColorGreen) }
-                    items(okLpg.size) { i -> val w = okLpg[i]; WorkItemCard(w.name, getWorkStatus(w, selectedCar), ColorGreen, w.intervalKm, w.intervalMonths) { onWorkClick(w) } }
+                    items(okLpg.size) { i -> val w = okLpg[i]; WorkItemCard(w.name, getWorkStatus(w, selectedCar), ColorGreen, w.intervalKm, w.intervalMonths, w.lastMileage, currentMileage) { onWorkClick(w) } }
                 }
             }
 
