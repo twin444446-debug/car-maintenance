@@ -27,7 +27,6 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
-// === ДИАЛОГ АВТО ===
 @Composable
 fun AddCarDialog(existingCar: Car? = null, onDismiss: () -> Unit, onSave: (Car) -> Unit) {
     var brand by remember { mutableStateOf(existingCar?.brand ?: "") }
@@ -43,7 +42,6 @@ fun AddCarDialog(existingCar: Car? = null, onDismiss: () -> Unit, onSave: (Car) 
     var attemptedSave by remember { mutableStateOf(false) }
     val isBrandError = attemptedSave && brand.isBlank()
     val isModelError = attemptedSave && model.isBlank()
-
     val imagePickerLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri: Uri? -> if (uri != null) imageUri = uri.toString() }
 
     AlertDialog(
@@ -69,7 +67,6 @@ fun AddCarDialog(existingCar: Car? = null, onDismiss: () -> Unit, onSave: (Car) 
     )
 }
 
-// === ДИАЛОГ РАБОТЫ ===
 @Composable
 fun AddEditWorkDialog(existingWork: MaintenanceWork?, onDismiss: () -> Unit, onSave: (MaintenanceWork) -> Unit) {
     val context = LocalContext.current
@@ -78,6 +75,7 @@ fun AddEditWorkDialog(existingWork: MaintenanceWork?, onDismiss: () -> Unit, onS
     var intervalMonths by remember { mutableStateOf(if ((existingWork?.intervalMonths ?: 0) > 0) existingWork!!.intervalMonths.toString() else "") }
     var notDone by remember { mutableStateOf(existingWork?.hasLastExecution != true) }
     var preventive by remember { mutableStateOf(existingWork?.preventive ?: false) }
+    var notes by remember { mutableStateOf(existingWork?.notes ?: "") }
     var lastMileage by remember { mutableStateOf(if (existingWork?.hasLastExecution == true) existingWork.lastMileage.toString() else "") }
     var lastDate by remember { mutableStateOf(if (existingWork?.lastDate ?: 0L > 0L) existingWork!!.lastDate else System.currentTimeMillis()) }
     
@@ -93,6 +91,7 @@ fun AddEditWorkDialog(existingWork: MaintenanceWork?, onDismiss: () -> Unit, onS
                     OutlinedTextField(value = intervalKm, onValueChange = { intervalKm = it }, label = { Text("Интервал, км") }, modifier = Modifier.weight(1f), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
                     OutlinedTextField(value = intervalMonths, onValueChange = { intervalMonths = it }, label = { Text("Интервал, мес") }, modifier = Modifier.weight(1f), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
                 }
+                OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text("Примечание (причина ремонта)") }, colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(checked = notDone, onCheckedChange = { notDone = it }, colors = CheckboxDefaults.colors(checkedColor = ColorGreen))
                     Text("Не выполнялась", color = TextSecondary, fontSize = 14.sp)
@@ -113,19 +112,19 @@ fun AddEditWorkDialog(existingWork: MaintenanceWork?, onDismiss: () -> Unit, onS
         },
         confirmButton = { TextButton(onClick = {
             if (name.isNotBlank()) {
-                onSave(MaintenanceWork(existingWork?.id ?: System.currentTimeMillis(), existingWork?.carId ?: 0L, name, intervalKm.toIntOrNull() ?: 0, intervalMonths.toIntOrNull() ?: 0, lastMileage.toIntOrNull() ?: 0, lastDate, !notDone, existingWork?.skipped ?: false, preventive))
+                onSave(MaintenanceWork(existingWork?.id ?: System.currentTimeMillis(), existingWork?.carId ?: 0L, name, intervalKm.toIntOrNull() ?: 0, intervalMonths.toIntOrNull() ?: 0, lastMileage.toIntOrNull() ?: 0, lastDate, !notDone, existingWork?.skipped ?: false, preventive, notes))
             } else attemptedSave = true
         }) { Text("Сохранить", color = ColorGreen) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена", color = TextSecondary) } }
     )
 }
 
-// === ДИАЛОГ ДЕЙСТВИЙ (С ВЫБОРОМ ДАТЫ) ===
 @Composable
-fun WorkActionsDialog(work: MaintenanceWork, onDismiss: () -> Unit, onComplete: (Int, Long) -> Unit, onSkip: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit, onNotDone: () -> Unit) {
+fun WorkActionsDialog(work: MaintenanceWork, onDismiss: () -> Unit, onComplete: (Int, Long, String) -> Unit, onSkip: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit, onNotDone: () -> Unit) {
     var showCompleteInput by remember { mutableStateOf(false) }
     var mileageInput by remember { mutableStateOf("") }
     var dateInput by remember { mutableStateOf(System.currentTimeMillis()) }
+    var notesInput by remember { mutableStateOf("") }
     val context = LocalContext.current
 
     AlertDialog(
@@ -133,8 +132,10 @@ fun WorkActionsDialog(work: MaintenanceWork, onDismiss: () -> Unit, onComplete: 
         text = {
             if (showCompleteInput) {
                 Column { 
-                    Text("Введите пробег и дату выполнения:", color = TextSecondary); 
+                    Text("Введите пробег, дату и примечание:", color = TextSecondary); 
                     OutlinedTextField(value = mileageInput, onValueChange = { mileageInput = it }, label = { Text("Пробег (км)") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary)) 
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(value = notesInput, onValueChange = { notesInput = it }, label = { Text("Примечание (необязательно)") }, colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
                     Spacer(modifier = Modifier.height(8.dp))
                     val dateStr = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(Date(dateInput))
                     Button(onClick = {
@@ -156,7 +157,7 @@ fun WorkActionsDialog(work: MaintenanceWork, onDismiss: () -> Unit, onComplete: 
                 }
             }
         },
-        confirmButton = { if (showCompleteInput) TextButton(onClick = { onComplete(mileageInput.toIntOrNull() ?: 0, dateInput) }) { Text("Сохранить", color = ColorGreen) } },
+        confirmButton = { if (showCompleteInput) TextButton(onClick = { onComplete(mileageInput.toIntOrNull() ?: 0, dateInput, notesInput) }) { Text("Сохранить", color = ColorGreen) } },
         dismissButton = { if (showCompleteInput) TextButton(onClick = { showCompleteInput = false }) { Text("Назад", color = TextSecondary) } }
     )
 }
