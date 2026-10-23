@@ -62,7 +62,15 @@ fun AddCarDialog(existingCar: Car? = null, onDismiss: () -> Unit, onSave: (Car) 
                 }
             }
         },
-        confirmButton = { TextButton(onClick = { if (brand.isNotBlank() && model.isNotBlank()) { val fuelType = if (hasLpg) "Бензин/Газ" else "Бензин"; onSave(Car(existingCar?.id ?: System.currentTimeMillis(), brand, model, year, vin, mileage, engine, fuelType, hasLpg, notes, imageUri)) } else attemptedSave = true }) { Text("Сохранить", color = ColorGreen) } },
+        confirmButton = { 
+            TextButton(onClick = { 
+                if (brand.isNotBlank() && model.isNotBlank()) { 
+                    val fuelType = if (hasLpg) "Бензин/Газ" else "Бензин"
+                    // Если existingCar есть, берем его ID, иначе создастся новый UUID
+                    onSave(Car(existingCar?.id ?: "", brand, model, year, vin, mileage, engine, fuelType, hasLpg, notes, imageUri)) 
+                } else attemptedSave = true 
+            }) { Text("Сохранить", color = ColorGreen) } 
+        },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена", color = TextSecondary) } }
     )
 }
@@ -171,7 +179,8 @@ fun AddEditWorkDialog(existingWork: MaintenanceWork?, allWorks: List<Maintenance
                     val finalMileage = if (hasExecution) (lastMileage.toIntOrNull() ?: 0) else 0
                     val finalDate = if (hasExecution) lastDate else 0L
 
-                    onSave(MaintenanceWork(existingWork?.id ?: System.currentTimeMillis(), existingWork?.carId ?: 0L, name, finalKm, finalMonths, finalMileage, finalDate, hasExecution, existingWork?.skipped ?: false, preventive, notes))
+                    // ID генерируется автоматически в модели, если не передан существующий
+                    onSave(MaintenanceWork(existingWork?.id ?: "", existingWork?.carId ?: "", name, finalKm, finalMonths, finalMileage, finalDate, hasExecution, existingWork?.skipped ?: false, preventive, notes))
                 } else attemptedSave = true
             }) { Text("Сохранить", color = ColorGreen) } 
         },
