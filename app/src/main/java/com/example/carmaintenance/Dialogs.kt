@@ -68,7 +68,7 @@ fun AddCarDialog(existingCar: Car? = null, onDismiss: () -> Unit, onSave: (Car) 
 }
 
 @Composable
-fun AddEditWorkDialog(existingWork: MaintenanceWork?, onDismiss: () -> Unit, onSave: (MaintenanceWork) -> Unit) {
+fun AddEditWorkDialog(existingWork: MaintenanceWork?, existingNames: List<String>, onDismiss: () -> Unit, onSave: (MaintenanceWork) -> Unit) {
     val context = LocalContext.current
     var name by remember { mutableStateOf(existingWork?.name ?: "") }
     var intervalKm by remember { mutableStateOf(if ((existingWork?.intervalKm ?: 0) > 0) existingWork!!.intervalKm.toString() else "") }
@@ -79,48 +79,83 @@ fun AddEditWorkDialog(existingWork: MaintenanceWork?, onDismiss: () -> Unit, onS
     var lastMileage by remember { mutableStateOf(if (existingWork?.hasLastExecution == true) existingWork.lastMileage.toString() else "") }
     var lastDate by remember { mutableStateOf(if (existingWork?.lastDate ?: 0L > 0L) existingWork!!.lastDate else System.currentTimeMillis()) }
     
+    var isExtra by remember { mutableStateOf(existingWork != null && existingWork.intervalKm == 0 && existingWork.intervalMonths == 0) }
+
     var attemptedSave by remember { mutableStateOf(false) }
     val isNameError = attemptedSave && name.isBlank()
+
+    var expanded by remember { mutableStateOf(false) }
+    val filteredSuggestions = existingNames.filter { it.contains(name, ignoreCase = true) && it != name }
 
     AlertDialog(
         onDismissRequest = onDismiss, containerColor = CardColor, title = { Text(if (existingWork == null) "Новая работа" else "Изменить работу", color = TextPrimary) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = name, onValueChange = { name = it; if(attemptedSave) attemptedSave = name.isBlank() }, label = { Text("Название *") }, singleLine = true, isError = isNameError, supportingText = { if (isNameError) Text("Обязательное поле", color = ColorRed) }, colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary, errorTextColor = ColorRed, errorBorderColor = ColorRed, errorLabelColor = ColorRed))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = intervalKm, onValueChange = { intervalKm = it }, label = { Text("Интервал, км") }, modifier = Modifier.weight(1f), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
-                    OutlinedTextField(value = intervalMonths, onValueChange = { intervalMonths = it }, label = { Text("Интервал, мес") }, modifier = Modifier.weight(1f), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
+                
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = isExtra, onCheckedChange = { isExtra = it }, colors = CheckboxDefaults.colors(checkedColor = ColorPurple))
+                    Text("Внеплановая работа (ремонт)", color = TextSecondary, fontSize = 14.sp)
                 }
+
+                Box {
+                    OutlinedTextField(
+                        value = name, onValueChange = { name = it; expanded = it.isNotBlank(); if(attemptedSave) attemptedSave = name.isBlank() }, 
+                        label = { Text("Название *") }, singleLine = true, isError = isNameError, 
+                        supportingText = { if (isNameError) Text("Обязательное поле", color = ColorRed) }, 
+                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary, errorTextColor = ColorRed, errorBorderColor = ColorRed, errorLabelColor = ColorRed),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    DropdownMenu(expanded = expanded && filteredSuggestions.isNotEmpty(), onDismissRequest = { expanded = false }, modifier = Modifier.background(CardColor)) {
+                        filteredSuggestions.forEach { suggestion ->
+                            DropdownMenuItem(text = { Text(suggestion, color = TextPrimary) }, onClick = { name = suggestion; expanded = false })
+                        }
+                    }
+                }
+
+                if (!isExtra) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(value = intervalKm, onValueChange = { intervalKm = it }, label = { Text("Интервал, км") }, modifier = Modifier.weight(1f), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
+                        OutlinedTextField(value = intervalMonths, onValueChange = { intervalMonths = it }, label = { Text("Интервал, мес") }, modifier = Modifier.weight(1f), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = preventive, onCheckedChange = { preventive = it }, colors = CheckboxDefaults.colors(checkedColor = ColorYellow))
+                        Text("Предупредительная (Скоро)", color = TextSecondary, fontSize = 14.sp)
+                    }
+                }
+
                 OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text("Примечание (причина ремонта)") }, colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
+                
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(checked = notDone, onCheckedChange = { notDone = it }, colors = CheckboxDefaults.colors(checkedColor = ColorGreen))
                     Text("Не выполнялась", color = TextSecondary, fontSize = 14.sp)
                 }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = preventive, onCheckedChange = { preventive = it }, colors = CheckboxDefaults.colors(checkedColor = ColorYellow))
-                    Text("Предупредительная (Скоро)", color = TextSecondary, fontSize = 14.sp)
-                }
+                
                 val dateStr = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(Date(lastDate))
                 Button(onClick = {
                     val c = Calendar.getInstance(); c.timeInMillis = lastDate
                     DatePickerDialog(context, { _, y, m, d -> lastDate = Calendar.getInstance().apply { set(y, m, d, 12, 0, 0) }.timeInMillis }, c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH)).show()
                 }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E2A45))) { Text("Дата выполнения: $dateStr", color = TextPrimary) }
+                
                 if (!notDone) {
                     OutlinedTextField(value = lastMileage, onValueChange = { lastMileage = it }, label = { Text("Пробег при выполнении") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
                 }
             }
         },
-        confirmButton = { TextButton(onClick = {
-            if (name.isNotBlank()) {
-                onSave(MaintenanceWork(existingWork?.id ?: System.currentTimeMillis(), existingWork?.carId ?: 0L, name, intervalKm.toIntOrNull() ?: 0, intervalMonths.toIntOrNull() ?: 0, lastMileage.toIntOrNull() ?: 0, lastDate, !notDone, existingWork?.skipped ?: false, preventive, notes))
-            } else attemptedSave = true
-        }) { Text("Сохранить", color = ColorGreen) } },
+        confirmButton = { 
+            TextButton(onClick = {
+                if (name.isNotBlank()) {
+                    val finalKm = if (isExtra) 0 else (intervalKm.toIntOrNull() ?: 0)
+                    val finalMonths = if (isExtra) 0 else (intervalMonths.toIntOrNull() ?: 0)
+                    onSave(MaintenanceWork(existingWork?.id ?: System.currentTimeMillis(), existingWork?.carId ?: 0L, name, finalKm, finalMonths, lastMileage.toIntOrNull() ?: 0, lastDate, !notDone, existingWork?.skipped ?: false, preventive, notes))
+                } else attemptedSave = true
+            }) { Text("Сохранить", color = ColorGreen) } 
+        },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена", color = TextSecondary) } }
     )
 }
 
 @Composable
-fun WorkActionsDialog(work: MaintenanceWork, onDismiss: () -> Unit, onComplete: (Int, Long, String) -> Unit, onSkip: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit, onNotDone: () -> Unit) {
+fun WorkActionsDialog(work: MaintenanceWork, onDismiss: () -> Unit, onComplete: (Int, Long, String) -> Unit, onSkip: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit, onNotDone: () -> Unit, onShowInList: () -> Unit) {
     var showCompleteInput by remember { mutableStateOf(false) }
     var mileageInput by remember { mutableStateOf("") }
     var dateInput by remember { mutableStateOf(System.currentTimeMillis()) }
@@ -148,6 +183,7 @@ fun WorkActionsDialog(work: MaintenanceWork, onDismiss: () -> Unit, onComplete: 
                     ActionRowButton("Выполнить работу", ColorGreen) { showCompleteInput = true }
                     ActionRowButton("Требует внимания", ColorRed) { onNotDone() }
                     ActionRowButton("Пропустить работу", ColorPurple) { onSkip() }
+                    ActionRowButton("Показать в списке", ColorBlue) { onShowInList(); onDismiss() }
                     Spacer(modifier = Modifier.height(16.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
                         TextButton(onClick = onEdit) { Text("Изменить", color = TextSecondary, fontSize = 13.sp) }
