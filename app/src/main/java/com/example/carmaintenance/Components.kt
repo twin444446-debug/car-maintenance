@@ -92,17 +92,29 @@ fun SpecItem(icon: androidx.compose.ui.graphics.vector.ImageVector, label: Strin
     }
 }
 
-@Composable fun WorkItemCard(name: String, status: String, statusColor: Color, intervalKm: Int, onClick: () -> Unit) {
+@Composable fun WorkItemCard(name: String, status: String, statusColor: Color, intervalKm: Int, intervalMonths: Int, onClick: () -> Unit) {
+    // Формируем красивую строку с периодичностью
+    val periodText = buildString {
+        if (intervalKm > 0) append("$intervalKm км")
+        if (intervalKm > 0 && intervalMonths > 0) append(" / ")
+        if (intervalMonths > 0) append("$intervalMonths мес.")
+        if (intervalKm == 0 && intervalMonths == 0) append("По износу")
+    }
+
     Card(modifier = Modifier.fillMaxWidth().clickable { onClick() }, shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = CardColor)) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(modifier = Modifier.size(40.dp).background(statusColor.copy(alpha = 0.2f), CircleShape), contentAlignment = Alignment.Center) { Icon(if(status == "Выполнено") Icons.Default.Check else Icons.Default.Warning, null, tint = statusColor) }
+            Box(modifier = Modifier.size(40.dp).background(statusColor.copy(alpha = 0.2f), CircleShape), contentAlignment = Alignment.Center) { 
+                Icon(if(status == "Выполнено") Icons.Default.Check else Icons.Default.Warning, null, tint = statusColor) 
+            }
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(name, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 Spacer(modifier = Modifier.height(4.dp))
-                Text("Интервал: $intervalKm км", color = TextSecondary, fontSize = 12.sp)
+                Text("Периодичность: $periodText", color = TextSecondary, fontSize = 12.sp)
             }
-            Surface(color = statusColor.copy(alpha = 0.15f), shape = RoundedCornerShape(16.dp)) { Text(status, color = statusColor, modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp), fontSize = 11.sp, fontWeight = FontWeight.Medium) }
+            Surface(color = statusColor.copy(alpha = 0.15f), shape = RoundedCornerShape(16.dp)) { 
+                Text(status, color = statusColor, modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp), fontSize = 11.sp, fontWeight = FontWeight.Medium) 
+            }
         }
     }
 }
