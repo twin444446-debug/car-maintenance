@@ -68,7 +68,7 @@ fun AddCarDialog(existingCar: Car? = null, onDismiss: () -> Unit, onSave: (Car) 
 }
 
 @Composable
-fun AddEditWorkDialog(existingWork: MaintenanceWork?, existingNames: List<String>, onDismiss: () -> Unit, onSave: (MaintenanceWork) -> Unit) {
+fun AddEditWorkDialog(existingWork: MaintenanceWork?, allWorks: List<MaintenanceWork>, onDismiss: () -> Unit, onSave: (MaintenanceWork) -> Unit) {
     val context = LocalContext.current
     var name by remember { mutableStateOf(existingWork?.name ?: "") }
     var intervalKm by remember { mutableStateOf(if ((existingWork?.intervalKm ?: 0) > 0) existingWork!!.intervalKm.toString() else "") }
@@ -85,7 +85,7 @@ fun AddEditWorkDialog(existingWork: MaintenanceWork?, existingNames: List<String
     val isNameError = attemptedSave && name.isBlank()
 
     var expanded by remember { mutableStateOf(false) }
-    val filteredSuggestions = existingNames.filter { it.contains(name, ignoreCase = true) && it != name }
+    val filteredSuggestions = allWorks.filter { it.name.contains(name, ignoreCase = true) && it.name != name }
 
     AlertDialog(
         onDismissRequest = onDismiss, containerColor = CardColor, title = { Text(if (existingWork == null) "Новая работа" else "Изменить работу", color = TextPrimary) },
@@ -107,7 +107,18 @@ fun AddEditWorkDialog(existingWork: MaintenanceWork?, existingNames: List<String
                     )
                     DropdownMenu(expanded = expanded && filteredSuggestions.isNotEmpty(), onDismissRequest = { expanded = false }, modifier = Modifier.background(CardColor)) {
                         filteredSuggestions.forEach { suggestion ->
-                            DropdownMenuItem(text = { Text(suggestion, color = TextPrimary) }, onClick = { name = suggestion; expanded = false })
+                            DropdownMenuItem(
+                                text = { Text(suggestion.name, color = TextPrimary) }, 
+                                onClick = { 
+                                    name = suggestion.name
+                                    // АВТОПОДСТАНОВКА ИНТЕРВАЛОВ
+                                    if (suggestion.intervalKm > 0) intervalKm = suggestion.intervalKm.toString()
+                                    if (suggestion.intervalMonths > 0) intervalMonths = suggestion.intervalMonths.toString()
+                                    if (suggestion.intervalKm == 0 && suggestion.intervalMonths == 0) isExtra = true
+                                    
+                                    expanded = false 
+                                }
+                            )
                         }
                     }
                 }
