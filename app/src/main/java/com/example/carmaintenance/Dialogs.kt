@@ -105,9 +105,7 @@ fun AddEditWorkDialog(existingWork: MaintenanceWork?, allWorks: List<Maintenance
                         Button(
                             onClick = { workMode = index },
                             modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isSelected) (if (index == 1) ColorGreen else if (index == 2) ColorPurple else ColorBlue) else CardColor
-                            ),
+                            colors = ButtonDefaults.buttonColors(containerColor = if (isSelected) (if (index == 1) ColorGreen else if (index == 2) ColorPurple else ColorBlue) else CardColor),
                             shape = RoundedCornerShape(8.dp), contentPadding = PaddingValues(0.dp)
                         ) { Text(title, fontSize = 12.sp, color = TextPrimary, maxLines = 1) }
                     }
@@ -119,32 +117,17 @@ fun AddEditWorkDialog(existingWork: MaintenanceWork?, allWorks: List<Maintenance
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     OutlinedTextField(
-                        value = name,
-                        onValueChange = { 
-                            name = it
-                            if(attemptedSave) attemptedSave = name.isBlank()
-                        },
-                        label = { Text("Название *") },
-                        singleLine = true,
-                        isError = isNameError,
+                        value = name, onValueChange = { name = it; if(attemptedSave) attemptedSave = name.isBlank() },
+                        label = { Text("Название *") }, singleLine = true, isError = isNameError,
                         supportingText = { if (isNameError) Text("Обязательное поле", color = ColorRed) },
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary, 
-                            errorTextColor = ColorRed, errorBorderColor = ColorRed, errorLabelColor = ColorRed,
-                            focusedContainerColor = CardColor, unfocusedContainerColor = CardColor
-                        ),
+                        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary, errorTextColor = ColorRed, errorBorderColor = ColorRed, errorLabelColor = ColorRed, focusedContainerColor = CardColor, unfocusedContainerColor = CardColor),
                         modifier = Modifier.fillMaxWidth().menuAnchor()
                     )
-                    
-                    ExposedDropdownMenu(
-                        expanded = expanded && filteredSuggestions.isNotEmpty(),
-                        onDismissRequest = { expanded = false },
-                        modifier = Modifier.background(CardColor)
-                    ) {
+                    ExposedDropdownMenu(expanded = expanded && filteredSuggestions.isNotEmpty(), onDismissRequest = { expanded = false }, modifier = Modifier.background(CardColor)) {
                         filteredSuggestions.forEach { suggestion ->
                             DropdownMenuItem(
-                                text = { Text(suggestion.name, color = TextPrimary) },
-                                onClick = {
+                                text = { Text(suggestion.name, color = TextPrimary) }, 
+                                onClick = { 
                                     name = suggestion.name
                                     if (suggestion.intervalKm > 0) intervalKm = suggestion.intervalKm.toString()
                                     if (suggestion.intervalMonths > 0) intervalMonths = suggestion.intervalMonths.toString()
