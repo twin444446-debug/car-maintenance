@@ -26,7 +26,7 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
-// === ДИАЛОГ ДОБАВЛЕНИЯ/РЕДАКТИРОВАНИЯ АВТО С ФОТО ===
+// === ДИАЛОГ АВТО (С ФОТО И ЗАМЕТКАМИ) ===
 @Composable
 fun AddCarDialog(existingCar: Car? = null, onDismiss: () -> Unit, onSave: (Car) -> Unit) {
     var brand by remember { mutableStateOf(existingCar?.brand ?: "") }
@@ -37,6 +37,7 @@ fun AddCarDialog(existingCar: Car? = null, onDismiss: () -> Unit, onSave: (Car) 
     var engine by remember { mutableStateOf(existingCar?.engine ?: "") }
     var hasLpg by remember { mutableStateOf(existingCar?.hasLpg ?: false) }
     var imageUri by remember { mutableStateOf(existingCar?.imageUri ?: "") }
+    var notes by remember { mutableStateOf(existingCar?.notes ?: "") }
 
     var attemptedSave by remember { mutableStateOf(false) }
     val isBrandError = attemptedSave && brand.isBlank()
@@ -65,6 +66,7 @@ fun AddCarDialog(existingCar: Car? = null, onDismiss: () -> Unit, onSave: (Car) 
                 OutlinedTextField(value = mileage, onValueChange = { mileage = it }, label = { Text("Пробег (км)") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
                 OutlinedTextField(value = vin, onValueChange = { vin = it }, label = { Text("VIN-код") }, singleLine = true, colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
                 OutlinedTextField(value = engine, onValueChange = { engine = it }, label = { Text("Двигатель") }, singleLine = true, colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
+                OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text("Заметки") }, colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(checked = hasLpg, onCheckedChange = { hasLpg = it }, colors = CheckboxDefaults.colors(checkedColor = ColorGreen))
                     Text("Установлено ГБО (Газ)", color = TextSecondary, fontSize = 14.sp)
@@ -75,7 +77,7 @@ fun AddCarDialog(existingCar: Car? = null, onDismiss: () -> Unit, onSave: (Car) 
             TextButton(onClick = { 
                 if (brand.isNotBlank() && model.isNotBlank()) {
                     val fuelType = if (hasLpg) "Бензин/Газ" else "Бензин"
-                    onSave(Car(existingCar?.id ?: System.currentTimeMillis(), brand, model, year, vin, mileage, engine, fuelType, hasLpg, existingCar?.notes ?: "", imageUri))
+                    onSave(Car(existingCar?.id ?: System.currentTimeMillis(), brand, model, year, vin, mileage, engine, fuelType, hasLpg, notes, imageUri))
                 } else attemptedSave = true
             }) { Text("Сохранить", color = ColorGreen) } 
         },
@@ -83,7 +85,7 @@ fun AddCarDialog(existingCar: Car? = null, onDismiss: () -> Unit, onSave: (Car) 
     )
 }
 
-// === ДИАЛОГ ДОБАВЛЕНИЯ/РЕДАКТИРОВАНИЯ РАБОТЫ ===
+// === ДИАЛОГ РАБОТЫ ===
 @Composable
 fun AddEditWorkDialog(existingWork: MaintenanceWork?, onDismiss: () -> Unit, onSave: (MaintenanceWork) -> Unit) {
     val context = LocalContext.current
@@ -91,6 +93,7 @@ fun AddEditWorkDialog(existingWork: MaintenanceWork?, onDismiss: () -> Unit, onS
     var intervalKm by remember { mutableStateOf(if ((existingWork?.intervalKm ?: 0) > 0) existingWork!!.intervalKm.toString() else "") }
     var intervalMonths by remember { mutableStateOf(if ((existingWork?.intervalMonths ?: 0) > 0) existingWork!!.intervalMonths.toString() else "") }
     var notDone by remember { mutableStateOf(existingWork?.hasLastExecution != true) }
+    var preventive by remember { mutableStateOf(existingWork?.preventive ?: false) }
     var lastMileage by remember { mutableStateOf(if (existingWork?.hasLastExecution == true) existingWork.lastMileage.toString() else "") }
     var lastDate by remember { mutableStateOf(if (existingWork?.lastDate ?: 0L > 0L) existingWork!!.lastDate else System.currentTimeMillis()) }
     
@@ -118,6 +121,10 @@ fun AddEditWorkDialog(existingWork: MaintenanceWork?, onDismiss: () -> Unit, onS
                     Checkbox(checked = notDone, onCheckedChange = { notDone = it }, colors = CheckboxDefaults.colors(checkedColor = ColorGreen))
                     Text("Не выполнялась", color = TextSecondary, fontSize = 14.sp)
                 }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = preventive, onCheckedChange = { preventive = it }, colors = CheckboxDefaults.colors(checkedColor = ColorYellow))
+                    Text("Предупредительная (Скоро)", color = TextSecondary, fontSize = 14.sp)
+                }
                 
                 val dateStr = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(Date(lastDate))
                 Button(
@@ -137,10 +144,8 @@ fun AddEditWorkDialog(existingWork: MaintenanceWork?, onDismiss: () -> Unit, onS
         confirmButton = {
             TextButton(onClick = {
                 if (name.isNotBlank()) {
-                    onSave(MaintenanceWork(existingWork?.id ?: System.currentTimeMillis(), existingWork?.carId ?: 0L, name, intervalKm.toIntOrNull() ?: 0, intervalMonths.toIntOrNull() ?: 0, lastMileage.toIntOrNull() ?: 0, lastDate, !notDone, existingWork?.skipped ?: false))
-                } else {
-                    attemptedSave = true
-                }
+                    onSave(MaintenanceWork(existingWork?.id ?: System.currentTimeMillis(), existingWork?.carId ?: 0L, name, intervalKm.toIntOrNull() ?: 0, intervalMonths.toIntOrNull() ?: 0, lastMileage.toIntOrNull() ?: 0, lastDate, !notDone, existingWork?.skipped ?: false, preventive))
+                } else attemptedSave = true
             }) { Text("Сохранить", color = ColorGreen) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена", color = TextSecondary) } }
@@ -165,14 +170,12 @@ fun WorkActionsDialog(work: MaintenanceWork, onDismiss: () -> Unit, onComplete: 
                 }
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    // Статусы (с точками)
                     ActionRowButton("Выполнить работу", ColorGreen) { showCompleteInput = true }
                     ActionRowButton("Требует внимания", ColorRed) { onNotDone() }
                     ActionRowButton("Пропустить работу", ColorPurple) { onSkip() }
                     
                     Spacer(modifier = Modifier.height(16.dp))
                     
-                    // Нижний ряд (без точек)
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.End, 
@@ -206,5 +209,54 @@ fun ActionRowButton(text: String, dotColor: Color, onClick: () -> Unit) {
     ) {
         Text(text, color = TextPrimary, fontSize = 16.sp)
         Box(modifier = Modifier.size(10.dp).background(dotColor, CircleShape))
+    }
+}
+
+// === ДИАЛОГ ИНФОРМАЦИИ О МАШИНЕ (С КНОПКОЙ ЗАПОЛНЕНИЯ) ===
+@Composable
+fun CarInfoDialog(car: Car, onDismiss: () -> Unit, onEdit: () -> Unit, onFillDefaults: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss, 
+        containerColor = CardColor, 
+        title = { 
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("${car.brand} ${car.model}", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                if (car.hasLpg) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Surface(color = ColorBlue.copy(alpha = 0.2f), shape = RoundedCornerShape(4.dp)) {
+                        Text("ГБО", color = ColorBlue, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                    }
+                }
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                InfoRow(label = "Год выпуска", value = car.year.ifBlank { "Не указан" })
+                InfoRow(label = "Пробег", value = "${car.mileage} км")
+                InfoRow(label = "VIN-код", value = car.vin.ifBlank { "Не указан" })
+                InfoRow(label = "Двигатель", value = car.engine.ifBlank { "Не указан" })
+                InfoRow(label = "Топливо", value = car.fuel)
+                if (car.notes.isNotBlank()) {
+                    InfoRow(label = "Примечания", value = car.notes)
+                }
+            }
+        },
+        confirmButton = { 
+            Column(horizontalAlignment = Alignment.End) {
+                TextButton(onClick = { onFillDefaults(); onDismiss() }) { 
+                    Text("Заполнить регламент", color = ColorGreen) 
+                }
+                TextButton(onClick = onEdit) { Text("Редактировать авто", color = ColorBlue) } 
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Закрыть", color = TextSecondary) } }
+    )
+}
+
+@Composable
+fun InfoRow(label: String, value: String) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(label, color = TextSecondary, fontSize = 14.sp)
+        Text(value, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
     }
 }
