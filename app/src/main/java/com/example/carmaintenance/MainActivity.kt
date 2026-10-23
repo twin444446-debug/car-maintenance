@@ -3,7 +3,6 @@ package com.example.carmaintenance
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -15,7 +14,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -24,7 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 
-// Твои модели данных (оставил как есть)
+// Твои модели данных
 data class Car(
     val id: Long, var brand: String, var model: String, var year: String,
     var vin: String, var mileage: String, var engine: String, var fuel: String,
@@ -39,7 +37,7 @@ data class MaintenanceWork(
     var preventive: Boolean = false
 )
 
-// Цветовая палитра из твоего макета
+// Цветовая палитра
 val BgColor = Color(0xFF0A1128)
 val CardColor = Color(0xFF111A32)
 val TextPrimary = Color(0xFFFFFFFF)
@@ -74,7 +72,7 @@ fun HomeScreen() {
             .fillMaxSize()
             .background(BgColor)
     ) {
-        // Верхняя панель (TopBar)
+        // Верхняя панель
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -92,16 +90,10 @@ fun HomeScreen() {
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Карточка автомобиля
             item { CarCard(testCar) }
-
-            // Блок статистики
             item { StatsRow() }
-
-            // Быстрые действия (Заглушки)
             item { QuickActionsRow() }
 
-            // Ближайшие работы
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -114,7 +106,6 @@ fun HomeScreen() {
             
             items(testWorks.size) { index ->
                 val work = testWorks[index]
-                // Имитация разных статусов для визуала
                 val status = when(index) {
                     0 -> "Требуется"
                     1 -> "Скоро"
@@ -140,14 +131,12 @@ fun CarCard(car: Car) {
     ) {
         Column {
             Box(modifier = Modifier.height(200.dp)) {
-                // Временная картинка из интернета (потом заменим на локальную или URL авто)
                 AsyncImage(
                     model = "https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?q=80&w=1000&auto=format&fit=crop",
                     contentDescription = "Car",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
-                // Градиент снизу для читаемости текста
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -172,7 +161,8 @@ fun CarCard(car: Car) {
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                SpecItem(Icons.Default.Speed, "Пробег", "${car.mileage} км")
+                // Заменено Speed на Info
+                SpecItem(Icons.Default.Info, "Пробег", "${car.mileage} км")
                 SpecItem(Icons.Default.Info, "VIN", car.vin)
                 SpecItem(Icons.Default.Build, "Двигатель", "${car.engine} л")
             }
@@ -232,7 +222,8 @@ fun QuickActionsRow() {
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        QuickActionBtn("Выбрать", Icons.Default.DirectionsCar, Color(0xFF4CAF50), Modifier.weight(1f))
+        // Заменено DirectionsCar на Home
+        QuickActionBtn("Выбрать", Icons.Default.Home, Color(0xFF4CAF50), Modifier.weight(1f))
         QuickActionBtn("Изменить", Icons.Default.Edit, Color(0xFF3498DB), Modifier.weight(1f))
         QuickActionBtn("Добавить", Icons.Default.Add, Color(0xFF9C27B0), Modifier.weight(1f))
     }
