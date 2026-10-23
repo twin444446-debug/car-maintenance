@@ -1,7 +1,7 @@
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
-    // Удалена строка id("org.jetbrains.kotlin.plugin.compose")
+    id("org.jetbrains.kotlin.android") version "2.0.0" // Явно указываем Kotlin 2.0.0
+    id("org.jetbrains.kotlin.plugin.compose") version "2.0.0" // Тот же версия для Compose
 }
 
 android {
@@ -34,11 +34,7 @@ android {
     buildFeatures {
         compose = true
     }
-
-    // Ключевое: для Kotlin 1.9.22 версия компилятора Compose — 1.5.10
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.10"
-    }
+    // Блок composeOptions больше НЕ НУЖЕН, плагин сам всё настроит
 }
 
 dependencies {
