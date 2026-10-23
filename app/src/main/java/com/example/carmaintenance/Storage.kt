@@ -54,7 +54,6 @@ fun saveWorks(context: Context, works: List<MaintenanceWork>) {
     prefs.edit().putString("works", array.toString()).apply()
 }
 
-// Функции для журнала истории
 fun loadHistory(context: Context): List<WorkHistory> {
     val prefs = context.getSharedPreferences("car_maintenance", Context.MODE_PRIVATE)
     val jsonStr = prefs.getString("history", "[]") ?: "[]"
