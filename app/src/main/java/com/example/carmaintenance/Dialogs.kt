@@ -27,7 +27,7 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
-// === ДИАЛОГ АВТО (С ФОТО И ЗАМЕТКАМИ) ===
+// === ДИАЛОГ АВТО ===
 @Composable
 fun AddCarDialog(existingCar: Car? = null, onDismiss: () -> Unit, onSave: (Car) -> Unit) {
     var brand by remember { mutableStateOf(existingCar?.brand ?: "") }
@@ -44,23 +44,13 @@ fun AddCarDialog(existingCar: Car? = null, onDismiss: () -> Unit, onSave: (Car) 
     val isBrandError = attemptedSave && brand.isBlank()
     val isModelError = attemptedSave && model.isBlank()
 
-    val imagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? -> if (uri != null) imageUri = uri.toString() }
+    val imagePickerLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri: Uri? -> if (uri != null) imageUri = uri.toString() }
 
     AlertDialog(
-        onDismissRequest = onDismiss, 
-        containerColor = CardColor, 
-        title = { Text(if (existingCar == null) "Новый автомобиль" else "Редактировать авто", color = TextPrimary) },
+        onDismissRequest = onDismiss, containerColor = CardColor, title = { Text(if (existingCar == null) "Новый автомобиль" else "Редактировать авто", color = TextPrimary) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(
-                    onClick = { imagePickerLauncher.launch("image/*") }, 
-                    modifier = Modifier.fillMaxWidth(), 
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E2A45))
-                ) {
-                    Text(if (imageUri.isEmpty()) "Выбрать фото" else "Фото выбрано ✓", color = TextPrimary)
-                }
+                Button(onClick = { imagePickerLauncher.launch("image/*") }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E2A45))) { Text(if (imageUri.isEmpty()) "Выбрать фото" else "Фото выбрано ✓", color = TextPrimary) }
                 OutlinedTextField(value = brand, onValueChange = { brand = it; if(attemptedSave) attemptedSave = brand.isBlank() || model.isBlank() }, label = { Text("Марка *") }, singleLine = true, isError = isBrandError, supportingText = { if (isBrandError) Text("Обязательное поле", color = ColorRed) }, colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary, errorTextColor = ColorRed, errorBorderColor = ColorRed, errorLabelColor = ColorRed))
                 OutlinedTextField(value = model, onValueChange = { model = it; if(attemptedSave) attemptedSave = brand.isBlank() || model.isBlank() }, label = { Text("Модель *") }, singleLine = true, isError = isModelError, supportingText = { if (isModelError) Text("Обязательное поле", color = ColorRed) }, colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary, errorTextColor = ColorRed, errorBorderColor = ColorRed, errorLabelColor = ColorRed))
                 OutlinedTextField(value = year, onValueChange = { year = it }, label = { Text("Год выпуска") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
@@ -74,14 +64,7 @@ fun AddCarDialog(existingCar: Car? = null, onDismiss: () -> Unit, onSave: (Car) 
                 }
             }
         },
-        confirmButton = { 
-            TextButton(onClick = { 
-                if (brand.isNotBlank() && model.isNotBlank()) {
-                    val fuelType = if (hasLpg) "Бензин/Газ" else "Бензин"
-                    onSave(Car(existingCar?.id ?: System.currentTimeMillis(), brand, model, year, vin, mileage, engine, fuelType, hasLpg, notes, imageUri))
-                } else attemptedSave = true
-            }) { Text("Сохранить", color = ColorGreen) } 
-        },
+        confirmButton = { TextButton(onClick = { if (brand.isNotBlank() && model.isNotBlank()) { val fuelType = if (hasLpg) "Бензин/Газ" else "Бензин"; onSave(Car(existingCar?.id ?: System.currentTimeMillis(), brand, model, year, vin, mileage, engine, fuelType, hasLpg, notes, imageUri)) } else attemptedSave = true }) { Text("Сохранить", color = ColorGreen) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена", color = TextSecondary) } }
     )
 }
@@ -104,10 +87,7 @@ fun AddEditWorkDialog(existingWork: MaintenanceWork?, onDismiss: () -> Unit, onS
     AlertDialog(
         onDismissRequest = onDismiss, containerColor = CardColor, title = { Text(if (existingWork == null) "Новая работа" else "Изменить работу", color = TextPrimary) },
         text = {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(value = name, onValueChange = { name = it; if(attemptedSave) attemptedSave = name.isBlank() }, label = { Text("Название *") }, singleLine = true, isError = isNameError, supportingText = { if (isNameError) Text("Обязательное поле", color = ColorRed) }, colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary, errorTextColor = ColorRed, errorBorderColor = ColorRed, errorLabelColor = ColorRed))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(value = intervalKm, onValueChange = { intervalKm = it }, label = { Text("Интервал, км") }, modifier = Modifier.weight(1f), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
@@ -140,21 +120,27 @@ fun AddEditWorkDialog(existingWork: MaintenanceWork?, onDismiss: () -> Unit, onS
     )
 }
 
-// === ДИАЛОГ ДЕЙСТВИЙ ===
+// === ДИАЛОГ ДЕЙСТВИЙ (С ВЫБОРОМ ДАТЫ) ===
 @Composable
-fun WorkActionsDialog(work: MaintenanceWork, onDismiss: () -> Unit, onComplete: (Int) -> Unit, onSkip: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit, onNotDone: () -> Unit) {
+fun WorkActionsDialog(work: MaintenanceWork, onDismiss: () -> Unit, onComplete: (Int, Long) -> Unit, onSkip: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit, onNotDone: () -> Unit) {
     var showCompleteInput by remember { mutableStateOf(false) }
     var mileageInput by remember { mutableStateOf("") }
+    var dateInput by remember { mutableStateOf(System.currentTimeMillis()) }
+    val context = LocalContext.current
 
     AlertDialog(
-        onDismissRequest = onDismiss, 
-        containerColor = CardColor, 
-        title = { Text(work.name, color = TextPrimary) },
+        onDismissRequest = onDismiss, containerColor = CardColor, title = { Text(work.name, color = TextPrimary) },
         text = {
             if (showCompleteInput) {
                 Column { 
-                    Text("Введите текущий пробег:", color = TextSecondary); 
+                    Text("Введите пробег и дату выполнения:", color = TextSecondary); 
                     OutlinedTextField(value = mileageInput, onValueChange = { mileageInput = it }, label = { Text("Пробег (км)") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary)) 
+                    Spacer(modifier = Modifier.height(8.dp))
+                    val dateStr = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(Date(dateInput))
+                    Button(onClick = {
+                        val c = Calendar.getInstance(); c.timeInMillis = dateInput
+                        DatePickerDialog(context, { _, y, m, d -> dateInput = Calendar.getInstance().apply { set(y, m, d, 12, 0, 0) }.timeInMillis }, c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH)).show()
+                    }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E2A45))) { Text("Дата: $dateStr", color = TextPrimary) }
                 }
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -170,75 +156,28 @@ fun WorkActionsDialog(work: MaintenanceWork, onDismiss: () -> Unit, onComplete: 
                 }
             }
         },
-        confirmButton = { if (showCompleteInput) TextButton(onClick = { onComplete(mileageInput.toIntOrNull() ?: 0) }) { Text("Сохранить", color = ColorGreen) } },
+        confirmButton = { if (showCompleteInput) TextButton(onClick = { onComplete(mileageInput.toIntOrNull() ?: 0, dateInput) }) { Text("Сохранить", color = ColorGreen) } },
         dismissButton = { if (showCompleteInput) TextButton(onClick = { showCompleteInput = false }) { Text("Назад", color = TextSecondary) } }
     )
 }
 
-// === ДИАЛОГ ОБНОВЛЕНИЯ ПРОБЕГА ===
 @Composable
 fun UpdateMileageDialog(currentMileage: String, onDismiss: () -> Unit, onSave: (String) -> Unit) {
     var mileage by remember { mutableStateOf(currentMileage) }
-    
     AlertDialog(
-        onDismissRequest = onDismiss, 
-        containerColor = CardColor, 
-        title = { Text("Обновить пробег", color = TextPrimary) },
-        text = {
-            Column {
-                Text("Введите текущий пробег автомобиля:", color = TextSecondary)
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = mileage, 
-                    onValueChange = { mileage = it }, 
-                    label = { Text("Пробег (км)") }, 
-                    singleLine = true, 
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), 
-                    colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary)
-                )
-            }
-        },
+        onDismissRequest = onDismiss, containerColor = CardColor, title = { Text("Обновить пробег", color = TextPrimary) },
+        text = { Column { Text("Введите текущий пробег автомобиля:", color = TextSecondary); Spacer(modifier = Modifier.height(8.dp)); OutlinedTextField(value = mileage, onValueChange = { mileage = it }, label = { Text("Пробег (км)") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary)) } },
         confirmButton = { TextButton(onClick = { onSave(mileage) }) { Text("Сохранить", color = ColorGreen) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Отмена", color = TextSecondary) } }
     )
 }
 
-// === ИНФО О МАШИНЕ (С КНОПКАМИ ОБНОВЛЕНИЯ И ЗАПОЛНЕНИЯ) ===
 @Composable
 fun CarInfoDialog(car: Car, onDismiss: () -> Unit, onEdit: () -> Unit, onFillDefaults: () -> Unit, onUpdateMileage: () -> Unit) {
     AlertDialog(
-        onDismissRequest = onDismiss, 
-        containerColor = CardColor, 
-        title = { 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("${car.brand} ${car.model}", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                if (car.hasLpg) {
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Surface(color = ColorBlue.copy(alpha = 0.2f), shape = RoundedCornerShape(4.dp)) {
-                        Text("ГБО", color = ColorBlue, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
-                    }
-                }
-            }
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                InfoRow(label = "Год выпуска", value = car.year.ifBlank { "Не указан" })
-                InfoRow(label = "Пробег", value = "${car.mileage} км")
-                InfoRow(label = "VIN-код", value = car.vin.ifBlank { "Не указан" })
-                InfoRow(label = "Двигатель", value = car.engine.ifBlank { "Не указан" })
-                InfoRow(label = "Топливо", value = car.fuel)
-                if (car.notes.isNotBlank()) {
-                    InfoRow(label = "Примечания", value = car.notes)
-                }
-            }
-        },
-        confirmButton = { 
-            Column(horizontalAlignment = Alignment.End) {
-                TextButton(onClick = { onUpdateMileage(); onDismiss() }) { Text("Обновить пробег", color = ColorYellow) }
-                TextButton(onClick = { onFillDefaults(); onDismiss() }) { Text("Заполнить регламент", color = ColorGreen) }
-                TextButton(onClick = onEdit) { Text("Редактировать авто", color = ColorBlue) } 
-            }
-        },
+        onDismissRequest = onDismiss, containerColor = CardColor, title = { Row(verticalAlignment = Alignment.CenterVertically) { Text("${car.brand} ${car.model}", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold); if (car.hasLpg) { Spacer(modifier = Modifier.width(8.dp)); Surface(color = ColorBlue.copy(alpha = 0.2f), shape = RoundedCornerShape(4.dp)) { Text("ГБО", color = ColorBlue, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)) } } } },
+        text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) { InfoRow(label = "Год выпуска", value = car.year.ifBlank { "Не указан" }); InfoRow(label = "Пробег", value = "${car.mileage} км"); InfoRow(label = "VIN-код", value = car.vin.ifBlank { "Не указан" }); InfoRow(label = "Двигатель", value = car.engine.ifBlank { "Не указан" }); InfoRow(label = "Топливо", value = car.fuel); if (car.notes.isNotBlank()) InfoRow(label = "Примечания", value = car.notes) } },
+        confirmButton = { Column(horizontalAlignment = Alignment.End) { TextButton(onClick = { onUpdateMileage(); onDismiss() }) { Text("Обновить пробег", color = ColorYellow) }; TextButton(onClick = { onFillDefaults(); onDismiss() }) { Text("Заполнить регламент", color = ColorGreen) }; TextButton(onClick = onEdit) { Text("Редактировать авто", color = ColorBlue) } } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Закрыть", color = TextSecondary) } }
     )
 }
