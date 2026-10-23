@@ -20,7 +20,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-// === ГЛАВНЫЙ КОНТЕЙНЕР (AppScreen) ===
 @Composable
 fun AppScreen() {
     val context = LocalContext.current
@@ -157,7 +156,7 @@ fun HomeScreenContent(cars: List<Car>, works: List<MaintenanceWork>, selectedCar
                 val work = carWorks[index]
                 val status = getWorkStatus(work, selectedCar!!)
                 val statusColor = when(status) { "Требуется", "Необходимо выполнить" -> ColorRed; "Пропущена" -> ColorPurple; "Скоро" -> ColorYellow; else -> ColorGreen }
-                WorkItemCard(work.name, status, statusColor, work.intervalKm) { onWorkClick(work) }
+                WorkItemCard(work.name, status, statusColor, work.intervalKm, work.intervalMonths) { onWorkClick(work) }
             }
         }
     }
@@ -186,7 +185,7 @@ fun WorkListScreen(works: List<MaintenanceWork>, selectedCar: Car?, onAddClick: 
                     val work = filteredWorks[index]
                     val status = getWorkStatus(work, selectedCar)
                     val statusColor = when(status) { "Требуется", "Необходимо выполнить" -> ColorRed; "Пропущена" -> ColorPurple; "Скоро" -> ColorYellow; else -> ColorGreen }
-                    WorkItemCard(work.name, status, statusColor, work.intervalKm) { }
+                    WorkItemCard(work.name, status, statusColor, work.intervalKm, work.intervalMonths) { }
                 }
             }
         }
@@ -194,7 +193,6 @@ fun WorkListScreen(works: List<MaintenanceWork>, selectedCar: Car?, onAddClick: 
     }
 }
 
-// === ЭКРАН РЕГЛАМЕНТА С РАЗДЕЛЕНИЕМ ===
 @Composable
 fun RegulationScreen(works: List<MaintenanceWork>, selectedCar: Car?, onWorkClick: (MaintenanceWork) -> Unit, onAddClick: () -> Unit) {
     if (selectedCar == null) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Сначала добавьте авто", color = TextSecondary) }; return }
@@ -218,15 +216,15 @@ fun RegulationScreen(works: List<MaintenanceWork>, selectedCar: Car?, onWorkClic
                 item { Text("🚗 Автомобиль", color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp)) }
                 if (reqRegular.isNotEmpty()) {
                     item { RegulationHeader("Требуют внимания", ColorRed) }
-                    items(reqRegular.size) { i -> val w = reqRegular[i]; WorkItemCard(w.name, getWorkStatus(w, selectedCar), if (getWorkStatus(w, selectedCar) == "Пропущена") ColorPurple else ColorRed, w.intervalKm) { onWorkClick(w) } }
+                    items(reqRegular.size) { i -> val w = reqRegular[i]; WorkItemCard(w.name, getWorkStatus(w, selectedCar), if (getWorkStatus(w, selectedCar) == "Пропущена") ColorPurple else ColorRed, w.intervalKm, w.intervalMonths) { onWorkClick(w) } }
                 }
                 if (soonRegular.isNotEmpty()) {
                     item { RegulationHeader("Скоро", ColorYellow) }
-                    items(soonRegular.size) { i -> val w = soonRegular[i]; WorkItemCard(w.name, getWorkStatus(w, selectedCar), ColorYellow, w.intervalKm) { onWorkClick(w) } }
+                    items(soonRegular.size) { i -> val w = soonRegular[i]; WorkItemCard(w.name, getWorkStatus(w, selectedCar), ColorYellow, w.intervalKm, w.intervalMonths) { onWorkClick(w) } }
                 }
                 if (okRegular.isNotEmpty()) {
                     item { RegulationHeader("В порядке", ColorGreen) }
-                    items(okRegular.size) { i -> val w = okRegular[i]; WorkItemCard(w.name, getWorkStatus(w, selectedCar), ColorGreen, w.intervalKm) { onWorkClick(w) } }
+                    items(okRegular.size) { i -> val w = okRegular[i]; WorkItemCard(w.name, getWorkStatus(w, selectedCar), ColorGreen, w.intervalKm, w.intervalMonths) { onWorkClick(w) } }
                 }
             }
 
@@ -234,15 +232,15 @@ fun RegulationScreen(works: List<MaintenanceWork>, selectedCar: Car?, onWorkClic
                 item { Text("⛽ ГБО", color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 16.dp)) }
                 if (reqLpg.isNotEmpty()) {
                     item { RegulationHeader("Требуют внимания", ColorRed) }
-                    items(reqLpg.size) { i -> val w = reqLpg[i]; WorkItemCard(w.name, getWorkStatus(w, selectedCar), if (getWorkStatus(w, selectedCar) == "Пропущена") ColorPurple else ColorRed, w.intervalKm) { onWorkClick(w) } }
+                    items(reqLpg.size) { i -> val w = reqLpg[i]; WorkItemCard(w.name, getWorkStatus(w, selectedCar), if (getWorkStatus(w, selectedCar) == "Пропущена") ColorPurple else ColorRed, w.intervalKm, w.intervalMonths) { onWorkClick(w) } }
                 }
                 if (soonLpg.isNotEmpty()) {
                     item { RegulationHeader("Скоро", ColorYellow) }
-                    items(soonLpg.size) { i -> val w = soonLpg[i]; WorkItemCard(w.name, getWorkStatus(w, selectedCar), ColorYellow, w.intervalKm) { onWorkClick(w) } }
+                    items(soonLpg.size) { i -> val w = soonLpg[i]; WorkItemCard(w.name, getWorkStatus(w, selectedCar), ColorYellow, w.intervalKm, w.intervalMonths) { onWorkClick(w) } }
                 }
                 if (okLpg.isNotEmpty()) {
                     item { RegulationHeader("В порядке", ColorGreen) }
-                    items(okLpg.size) { i -> val w = okLpg[i]; WorkItemCard(w.name, getWorkStatus(w, selectedCar), ColorGreen, w.intervalKm) { onWorkClick(w) } }
+                    items(okLpg.size) { i -> val w = okLpg[i]; WorkItemCard(w.name, getWorkStatus(w, selectedCar), ColorGreen, w.intervalKm, w.intervalMonths) { onWorkClick(w) } }
                 }
             }
 
