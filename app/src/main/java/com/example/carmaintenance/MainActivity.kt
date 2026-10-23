@@ -14,6 +14,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
@@ -25,6 +26,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.json.JSONArray
@@ -159,7 +161,6 @@ fun AppScreen() {
     var currentScreen by remember { mutableStateOf("Главная") }
     var selectedCarIndex by remember { mutableIntStateOf(0) }
 
-    // Диалоги
     var showAddCarDialog by remember { mutableStateOf(false) }
     var showAddWorkDialog by remember { mutableStateOf(false) }
     var editingWork by remember { mutableStateOf<MaintenanceWork?>(null) }
@@ -187,7 +188,6 @@ fun AppScreen() {
                     Triple("Работы", Icons.Filled.List, Icons.Outlined.List),
                     Triple("Регламент", Icons.Filled.DateRange, Icons.Outlined.DateRange),
                     Triple("Статистика", Icons.Filled.Info, Icons.Outlined.Info),
-                    // Заменили MoreHoriz на MoreVert
                     Triple("Ещё", Icons.Filled.MoreVert, Icons.Outlined.MoreVert)
                 )
                 navItems.forEach { (title, filledIcon, outlinedIcon) ->
@@ -222,7 +222,6 @@ fun AppScreen() {
         }
     }
 
-    // Диалоги
     if (showAddCarDialog) {
         AddCarDialog(onDismiss = { showAddCarDialog = false }, onSave = { newCar ->
             cars = cars + newCar
@@ -261,7 +260,7 @@ fun AppScreen() {
 }
 
 // === ЭКРАНЫ ===
-@OptIn(ExperimentalFoundationApi::class) // Разрешаем использовать экспериментальный HorizontalPager
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreenContent(cars: List<Car>, works: List<MaintenanceWork>, selectedCarIndex: Int, onCarSwipe: (Int) -> Unit, onAddCarClick: () -> Unit, onAddWorkClick: () -> Unit, onWorkClick: (MaintenanceWork) -> Unit) {
     val selectedCar = cars.getOrNull(selectedCarIndex)
@@ -272,14 +271,9 @@ fun HomeScreenContent(cars: List<Car>, works: List<MaintenanceWork>, selectedCar
             item { EmptyGarageCard(onAddCarClick) }
         } else {
             item {
-                // Карусель автомобилей
                 val pagerState = rememberPagerState(pageCount = { cars.size })
                 LaunchedEffect(pagerState.currentPage) { onCarSwipe(pagerState.currentPage) }
-                
-                HorizontalPager(state = pagerState, pageSpacing = 16.dp) { page ->
-                    CarCard(cars[page])
-                }
-                // Индикаторы страниц
+                HorizontalPager(state = pagerState, pageSpacing = 16.dp) { page -> CarCard(cars[page]) }
                 if (cars.size > 1) {
                     Row(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.Center) {
                         repeat(cars.size) { i ->
@@ -307,9 +301,7 @@ fun HomeScreenContent(cars: List<Car>, works: List<MaintenanceWork>, selectedCar
             }
         }
 
-        item {
-            Text("Ближайшие работы", color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-        }
+        item { Text("Ближайшие работы", color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
 
         if (carWorks.isEmpty()) {
             item { Text("Работ пока нет", color = TextSecondary) }
@@ -332,8 +324,7 @@ fun WorkListScreen(works: List<MaintenanceWork>) {
             item { Text("Работ пока нет", color = TextSecondary) }
         } else {
             items(works.size) { index ->
-                val work = works[index]
-                Text(work.name, color = TextPrimary, modifier = Modifier.padding(vertical = 8.dp))
+                Text(works[index].name, color = TextPrimary, modifier = Modifier.padding(vertical = 8.dp))
             }
         }
     }
@@ -367,10 +358,10 @@ fun AddCarDialog(onDismiss: () -> Unit, onSave: (Car) -> Unit) {
         onDismissRequest = onDismiss, containerColor = CardColor, title = { Text("Новый автомобиль", color = TextPrimary) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = brand, onValueChange = { brand = it }, label = { Text("Марка") }, colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
-                OutlinedTextField(value = model, onValueChange = { model = it }, label = { Text("Модель") }, colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
-                OutlinedTextField(value = year, onValueChange = { year = it }, label = { Text("Год выпуска") }, colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
-                OutlinedTextField(value = mileage, onValueChange = { mileage = it }, label = { Text("Пробег (км)") }, colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
+                OutlinedTextField(value = brand, onValueChange = { brand = it }, label = { Text("Марка") }, singleLine = true, colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
+                OutlinedTextField(value = model, onValueChange = { model = it }, label = { Text("Модель") }, singleLine = true, colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
+                OutlinedTextField(value = year, onValueChange = { year = it }, label = { Text("Год выпуска") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
+                OutlinedTextField(value = mileage, onValueChange = { mileage = it }, label = { Text("Пробег (км)") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
             }
         },
         confirmButton = { TextButton(onClick = { if (brand.isNotBlank() && model.isNotBlank()) onSave(Car(System.currentTimeMillis(), brand, model, year, "", mileage, "", "Бензин", false, "")) }) { Text("Сохранить", color = ColorGreen) } },
@@ -386,35 +377,56 @@ fun AddEditWorkDialog(existingWork: MaintenanceWork?, onDismiss: () -> Unit, onS
     var intervalMonths by remember { mutableStateOf(if ((existingWork?.intervalMonths ?: 0) > 0) existingWork!!.intervalMonths.toString() else "") }
     var notDone by remember { mutableStateOf(existingWork?.hasLastExecution != true) }
     var lastMileage by remember { mutableStateOf(if (existingWork?.hasLastExecution == true) existingWork.lastMileage.toString() else "") }
-    var lastDate by remember { mutableStateOf(if (existingWork?.hasLastExecution == true && existingWork.lastDate > 0) existingWork.lastDate else System.currentTimeMillis()) }
+    // Дата по умолчанию - сегодня, либо та, что уже была выбрана
+    var lastDate by remember { mutableStateOf(if (existingWork?.lastDate ?: 0L > 0L) existingWork!!.lastDate else System.currentTimeMillis()) }
 
     AlertDialog(
         onDismissRequest = onDismiss, containerColor = CardColor, title = { Text(if (existingWork == null) "Новая работа" else "Изменить работу", color = TextPrimary) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Название") }, colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
+                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Название") }, singleLine = true, colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = intervalKm, onValueChange = { intervalKm = it }, label = { Text("Интервал, км") }, modifier = Modifier.weight(1f), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
-                    OutlinedTextField(value = intervalMonths, onValueChange = { intervalMonths = it }, label = { Text("Интервал, мес") }, modifier = Modifier.weight(1f), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
+                    OutlinedTextField(value = intervalKm, onValueChange = { intervalKm = it }, label = { Text("Интервал, км") }, modifier = Modifier.weight(1f), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
+                    OutlinedTextField(value = intervalMonths, onValueChange = { intervalMonths = it }, label = { Text("Интервал, мес") }, modifier = Modifier.weight(1f), singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(checked = notDone, onCheckedChange = { notDone = it }, colors = CheckboxDefaults.colors(checkedColor = ColorGreen))
                     Text("Не выполнялась", color = TextSecondary, fontSize = 14.sp)
                 }
-                if (!notDone) {
-                    OutlinedTextField(value = lastMileage, onValueChange = { lastMileage = it }, label = { Text("Пробег при выполнении") }, colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
-                    val dateStr = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(Date(lastDate))
-                    Button(onClick = {
+                
+                // Поле даты - показываем всегда, чтобы можно было заносить задним числом
+                val dateStr = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(Date(lastDate))
+                Button(
+                    onClick = {
                         val c = Calendar.getInstance(); c.timeInMillis = lastDate
-                        DatePickerDialog(context, { _, y, m, d -> lastDate = Calendar.getInstance().apply { set(y, m, d, 12, 0, 0) }.timeInMillis }, c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH)).show()
-                    }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E2A45))) { Text("Дата: $dateStr", color = TextPrimary) }
+                        DatePickerDialog(context, { _, y, m, d -> 
+                            lastDate = Calendar.getInstance().apply { set(y, m, d, 12, 0, 0) }.timeInMillis 
+                        }, c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH)).show()
+                    }, 
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E2A45))
+                ) { Text("Дата выполнения: $dateStr", color = TextPrimary) }
+
+                // Поле пробега при выполнении - скрываем, если "Не выполнялась"
+                if (!notDone) {
+                    OutlinedTextField(value = lastMileage, onValueChange = { lastMileage = it }, label = { Text("Пробег при выполнении") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary))
                 }
             }
         },
         confirmButton = {
             TextButton(onClick = {
                 if (name.isNotBlank()) {
-                    onSave(MaintenanceWork(existingWork?.id ?: System.currentTimeMillis(), existingWork?.carId ?: 0L, name, intervalKm.toIntOrNull() ?: 0, intervalMonths.toIntOrNull() ?: 0, lastMileage.toIntOrNull() ?: 0, if (notDone) 0L else lastDate, !notDone, existingWork?.skipped ?: false))
+                    onSave(MaintenanceWork(
+                        existingWork?.id ?: System.currentTimeMillis(), 
+                        existingWork?.carId ?: 0L, 
+                        name, 
+                        intervalKm.toIntOrNull() ?: 0, 
+                        intervalMonths.toIntOrNull() ?: 0, 
+                        lastMileage.toIntOrNull() ?: 0, 
+                        lastDate, // сохраняем выбранную дату
+                        !notDone, 
+                        existingWork?.skipped ?: false
+                    ))
                 }
             }) { Text("Сохранить", color = ColorGreen) }
         },
@@ -431,7 +443,10 @@ fun WorkActionsDialog(work: MaintenanceWork, onDismiss: () -> Unit, onComplete: 
         onDismissRequest = onDismiss, containerColor = CardColor, title = { Text(work.name, color = TextPrimary) },
         text = {
             if (showCompleteInput) {
-                Column { Text("Введите текущий пробег:", color = TextSecondary); OutlinedTextField(value = mileageInput, onValueChange = { mileageInput = it }, label = { Text("Пробег (км)") }, colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary)) }
+                Column { 
+                    Text("Введите текущий пробег:", color = TextSecondary); 
+                    OutlinedTextField(value = mileageInput, onValueChange = { mileageInput = it }, label = { Text("Пробег (км)") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), colors = OutlinedTextFieldDefaults.colors(focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary)) 
+                }
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = { showCompleteInput = true }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = ColorGreen)) { Text("Выполнить") }
