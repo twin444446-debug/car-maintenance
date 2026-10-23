@@ -1,5 +1,6 @@
 package com.example.carmaintenance
 
+import android.net.Uri
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -18,10 +19,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 
 // === ГЛАВНЫЙ КОНТЕЙНЕР (AppScreen) ===
 @Composable
@@ -34,6 +37,7 @@ fun AppScreen() {
     var selectedCarIndex by remember { mutableIntStateOf(0) }
 
     var showAddCarDialog by remember { mutableStateOf(false) }
+    var editingCar by remember { mutableStateOf<Car?>(null) } // Для редактирования
     var showAddWorkDialog by remember { mutableStateOf(false) }
     var editingWork by remember { mutableStateOf<MaintenanceWork?>(null) }
     var actionWork by remember { mutableStateOf<MaintenanceWork?>(null) }
@@ -84,29 +88,32 @@ fun AppScreen() {
         Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
             when (currentScreen) {
                 "Главная" -> HomeScreenContent(cars, works, selectedCarIndex, onCarSwipe = { selectedCarIndex = it }, 
-                    onAddCarClick = { showAddCarDialog = true }, 
+                    onAddCarClick = { editingCar = null; showAddCarDialog = true }, 
                     onAddWorkClick = { if (selectedCar != null) { editingWork = null; showAddWorkDialog = true } },
                     onWorkClick = { actionWork = it },
                     onCarClick = { infoCar = it }
                 )
-                "Работы" -> WorkListScreen(works.filter { it.carId == selectedCar?.id })
+                "Работы" -> WorkListScreen(works.filter { it.carId == selectedCar?.id }, selectedCar)
                 "Регламент" -> RegulationScreen()
-                "Статистика" -> StatisticsScreen()
+                "Статистика" -> StatisticsScreen(works.filter { it.carId == selectedCar?.id }, selectedCar)
                 "Ещё" -> MoreScreen()
             }
         }
     }
 
     if (showAddCarDialog) {
-        AddCarDialog(onDismiss = { showAddCarDialog = false }, onSave = { newCar ->
-            cars = cars + newCar
-            saveCars(context, cars)
-            showAddCarDialog = false
+        AddCarDialog(existingCar = editingCar, onDismiss = { showAddCarDialog = false; editingCar = null }, onSave = { newCar ->
+            if (editingCar == null) cars = cars + newCar else cars = cars.map { if (it.id == newCar.id) newCar else it }
+            saveCars(context, cars); showAddCarDialog = false; editingCar = null
         })
     }
 
     if (infoCar != null) {
-        CarInfoDialog(car = infoCar!!, onDismiss = { infoCar = null })
+        CarInfoDialog(car = infoCar!!, onDismiss = { infoCar = null }, onEdit = { 
+            editingCar = infoCar
+            showAddCarDialog = true
+            infoCar = null 
+        })
     }
 
     if (showAddWorkDialog && selectedCar != null) {
@@ -137,6 +144,7 @@ fun AppScreen() {
         )
     }
 }
+
 // === ГЛАВНЫЙ ЭКРАН ===
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -196,23 +204,58 @@ fun HomeScreenContent(cars: List<Car>, works: List<MaintenanceWork>, selectedCar
     }
 }
 
-// === ЭКРАНЫ ВКЛАДОК ===
+// === ЭКРАН РАБОТ (С ФИЛЬТРАМИ) ===
 @Composable
-fun WorkListScreen(works: List<MaintenanceWork>) {
-    LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp)) {
-        item { Text("Список всех работ", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 16.dp)) }
-        if (works.isEmpty()) {
-            item { Text("Работ пока нет", color = TextSecondary) }
-        } else {
-            items(works.size) { index ->
-                Text(works[index].name, color = TextPrimary, modifier = Modifier.padding(vertical = 8.dp))
+fun WorkListScreen(works: List<MaintenanceWork>, selectedCar: Car?) {
+    if (selectedCar == null) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Сначала добавьте авто", color = TextSecondary) }; return }
+    var filter by remember { mutableStateOf("Все") }
+    val filteredWorks = when(filter) {
+        "Требуют" -> works.filter { getWorkStatus(it, selectedCar) == "Требуется" || getWorkStatus(it, selectedCar) == "Необходимо выполнить" }
+        "Выполнено" -> works.filter { getWorkStatus(it, selectedCar) == "Выполнено" }
+        else -> works
+    }
+
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("Все", "Требуют", "Выполнено").forEach { f ->
+                Button(onClick = { filter = f }, colors = ButtonDefaults.buttonColors(containerColor = if (filter == f) ColorBlue else CardColor)) {
+                    Text(f, color = TextPrimary)
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (filteredWorks.isEmpty()) {
+                item { Text("Работ нет", color = TextSecondary) }
+            } else {
+                items(filteredWorks.size) { index ->
+                    val work = filteredWorks[index]
+                    val status = getWorkStatus(work, selectedCar)
+                    val statusColor = when(status) { "Требуется", "Необходимо выполнить" -> ColorRed; "Пропущена" -> ColorPurple; else -> ColorGreen }
+                    WorkItemCard(work.name, status, statusColor, work.intervalKm) { }
+                }
             }
         }
     }
 }
 
+// === ЭКРАН СТАТИСТИКИ ===
+@Composable
+fun StatisticsScreen(works: List<MaintenanceWork>, selectedCar: Car?) {
+    if (selectedCar == null) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Сначала добавьте авто", color = TextSecondary) }; return }
+    val total = works.size
+    val requires = works.count { getWorkStatus(it, selectedCar) == "Требуется" || getWorkStatus(it, selectedCar) == "Необходимо выполнить" }
+    val completed = works.count { getWorkStatus(it, selectedCar) == "Выполнено" }
+
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Text("Статистика по ${selectedCar.brand} ${selectedCar.model}", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        StatCard("Всего работ", total.toString(), ColorBlue, Modifier.fillMaxWidth())
+        StatCard("Требуют внимания", requires.toString(), ColorRed, Modifier.fillMaxWidth())
+        StatCard("Выполнено", completed.toString(), ColorGreen, Modifier.fillMaxWidth())
+    }
+}
+
 @Composable fun RegulationScreen() { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Экран Регламент в разработке", color = TextSecondary) } }
-@Composable fun StatisticsScreen() { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Экран Статистика в разработке", color = TextSecondary) } }
 @Composable fun MoreScreen() { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Экран Ещё в разработке", color = TextSecondary) } }
 
 // === КОМПОНЕНТЫ (КАРТОЧКИ) ===
@@ -229,7 +272,7 @@ fun EmptyGarageCard(onAddClick: () -> Unit) {
 }
 
 @Composable
-fun CarInfoDialog(car: Car, onDismiss: () -> Unit) {
+fun CarInfoDialog(car: Car, onDismiss: () -> Unit, onEdit: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss, 
         containerColor = CardColor, 
@@ -257,7 +300,10 @@ fun CarInfoDialog(car: Car, onDismiss: () -> Unit) {
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Закрыть", color = ColorGreen) }
+            TextButton(onClick = onEdit) { Text("Редактировать", color = ColorBlue) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Закрыть", color = TextSecondary) }
         }
     )
 }
@@ -279,7 +325,20 @@ fun CarCard(car: Car, onClick: () -> Unit) {
     ) {
         Column {
             Box(modifier = Modifier.height(200.dp).fillMaxWidth()) {
-                Box(modifier = Modifier.fillMaxSize().background(Color(0xFF1E2A45)), contentAlignment = Alignment.Center) { Icon(Icons.Default.Home, null, tint = TextSecondary.copy(alpha = 0.5f), modifier = Modifier.size(64.dp)) }
+                // Отображение фото, если оно есть
+                if (car.imageUri.isNotEmpty()) {
+                    AsyncImage(
+                        model = Uri.parse(car.imageUri),
+                        contentDescription = "Car Photo",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF1E2A45)), contentAlignment = Alignment.Center) { 
+                        Icon(Icons.Default.Home, null, tint = TextSecondary.copy(alpha = 0.5f), modifier = Modifier.size(64.dp)) 
+                    }
+                }
+                
                 Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(colors = listOf(Color.Transparent, CardColor.copy(alpha = 0.9f)), startY = 300f)))
                 Column(modifier = Modifier.align(Alignment.BottomStart).padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
