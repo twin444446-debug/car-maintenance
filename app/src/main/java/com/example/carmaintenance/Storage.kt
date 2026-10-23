@@ -93,7 +93,7 @@ fun loadHistory(context: Context): List<WorkHistory> {
             list.add(
                 WorkHistory(
                     id = o.optString("id"),
-                    carId = o.optString("carId"), // <-- ИСПРАВЛЕНО ЗДЕСЬ
+                    carId = o.optString("carId"),
                     workName = o.optString("workName"),
                     date = o.optLong("date"),
                     mileage = o.optInt("mileage"),
@@ -132,7 +132,7 @@ fun loadDefaultTemplate(context: Context): List<MaintenanceWork> {
             list.add(
                 MaintenanceWork(
                     id = o.optString("id"),
-                    carId = "", // Шаблон не привязан к машине
+                    carId = "",
                     name = o.optString("name"),
                     intervalKm = o.optInt("intervalKm"),
                     intervalMonths = o.optInt("intervalMonths"),
