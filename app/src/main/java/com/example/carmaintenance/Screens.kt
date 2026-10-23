@@ -398,16 +398,3 @@ fun MiniStatCard(title: String, value: String, color: Color, modifier: Modifier)
         }
     }
 }
-
-@Composable
-fun MoreScreen(context: android.content.Context, onEditTemplateClick: () -> Unit) {
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Text("Дополнительно", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-        
-        Button(onClick = onEditTemplateClick, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = ColorBlue)) {
-            Text("Редактировать шаблон", color = TextPrimary)
-        }
-        
-        Text("Здесь можно настроить, какие работы будут автоматически подтягиваться при заполнении регламента для новых автомобилей.", color = TextSecondary, fontSize = 14.sp)
-    }
-}
