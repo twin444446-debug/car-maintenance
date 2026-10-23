@@ -140,10 +140,13 @@ fun AppScreen() {
             onDelete = {
                 works = works.filter { it.id != actionWork!!.id }
                 saveWorks(context, works); actionWork = null
+            },
+            onNotDone = {
+                works = works.map { if (it.id == actionWork!!.id) it.copy(skipped = false, hasLastExecution = false) else it }
+                saveWorks(context, works); actionWork = null
             }
         )
     }
-}
 
 // === ГЛАВНЫЙ ЭКРАН ===
 @OptIn(ExperimentalFoundationApi::class)
