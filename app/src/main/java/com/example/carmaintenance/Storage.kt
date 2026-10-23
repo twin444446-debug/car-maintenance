@@ -12,23 +12,9 @@ fun loadCars(context: Context): List<Car> {
         val array = JSONArray(jsonStr)
         for (i in 0 until array.length()) {
             val o = array.getJSONObject(i)
-            list.add(Car(
-                id = o.optLong("id"), 
-                brand = o.optString("brand"), 
-                model = o.optString("model"),
-                year = o.optString("year"), 
-                vin = o.optString("vin"), 
-                mileage = o.optString("mileage"),
-                engine = o.optString("engine"), 
-                fuel = o.optString("fuel"), 
-                hasLpg = o.optBoolean("hasLpg"), 
-                notes = o.optString("notes"),
-                imageUri = o.optString("imageUri") // <--- ДОБАВЛЕНО ФОТО
-            ))
+            list.add(Car(o.optLong("id"), o.optString("brand"), o.optString("model"), o.optString("year"), o.optString("vin"), o.optString("mileage"), o.optString("engine"), o.optString("fuel"), o.optBoolean("hasLpg"), o.optString("notes"), o.optString("imageUri")))
         }
-    } catch (e: Exception) { 
-        e.printStackTrace() 
-    }
+    } catch (e: Exception) { e.printStackTrace() }
     return list
 }
 
@@ -37,17 +23,7 @@ fun saveCars(context: Context, cars: List<Car>) {
     val array = JSONArray()
     cars.forEach { car ->
         val o = JSONObject()
-        o.put("id", car.id)
-        o.put("brand", car.brand)
-        o.put("model", car.model)
-        o.put("year", car.year)
-        o.put("vin", car.vin)
-        o.put("mileage", car.mileage)
-        o.put("engine", car.engine)
-        o.put("fuel", car.fuel)
-        o.put("hasLpg", car.hasLpg)
-        o.put("notes", car.notes)
-        o.put("imageUri", car.imageUri) // <--- ДОБАВЛЕНО ФОТО
+        o.put("id", car.id); o.put("brand", car.brand); o.put("model", car.model); o.put("year", car.year); o.put("vin", car.vin); o.put("mileage", car.mileage); o.put("engine", car.engine); o.put("fuel", car.fuel); o.put("hasLpg", car.hasLpg); o.put("notes", car.notes); o.put("imageUri", car.imageUri)
         array.put(o)
     }
     prefs.edit().putString("cars", array.toString()).apply()
@@ -61,22 +37,9 @@ fun loadWorks(context: Context): List<MaintenanceWork> {
         val array = JSONArray(jsonStr)
         for (i in 0 until array.length()) {
             val o = array.getJSONObject(i)
-            list.add(MaintenanceWork(
-                id = o.optLong("id"), 
-                carId = o.optLong("carId"), 
-                name = o.optString("name"),
-                intervalKm = o.optInt("intervalKm"), 
-                intervalMonths = o.optInt("intervalMonths"), 
-                lastMileage = o.optInt("lastMileage"),
-                lastDate = o.optLong("lastDate"), 
-                hasLastExecution = o.optBoolean("hasLastExecution"), 
-                skipped = o.optBoolean("skipped"),
-                preventive = o.optBoolean("preventive")
-            ))
+            list.add(MaintenanceWork(o.optLong("id"), o.optLong("carId"), o.optString("name"), o.optInt("intervalKm"), o.optInt("intervalMonths"), o.optInt("lastMileage"), o.optLong("lastDate"), o.optBoolean("hasLastExecution"), o.optBoolean("skipped"), o.optBoolean("preventive"), o.optString("notes")))
         }
-    } catch (e: Exception) { 
-        e.printStackTrace() 
-    }
+    } catch (e: Exception) { e.printStackTrace() }
     return list
 }
 
@@ -85,17 +48,34 @@ fun saveWorks(context: Context, works: List<MaintenanceWork>) {
     val array = JSONArray()
     works.forEach { work ->
         val o = JSONObject()
-        o.put("id", work.id)
-        o.put("carId", work.carId)
-        o.put("name", work.name)
-        o.put("intervalKm", work.intervalKm)
-        o.put("intervalMonths", work.intervalMonths)
-        o.put("lastMileage", work.lastMileage)
-        o.put("lastDate", work.lastDate)
-        o.put("hasLastExecution", work.hasLastExecution)
-        o.put("skipped", work.skipped)
-        o.put("preventive", work.preventive)
+        o.put("id", work.id); o.put("carId", work.carId); o.put("name", work.name); o.put("intervalKm", work.intervalKm); o.put("intervalMonths", work.intervalMonths); o.put("lastMileage", work.lastMileage); o.put("lastDate", work.lastDate); o.put("hasLastExecution", work.hasLastExecution); o.put("skipped", work.skipped); o.put("preventive", work.preventive); o.put("notes", work.notes)
         array.put(o)
     }
     prefs.edit().putString("works", array.toString()).apply()
+}
+
+// Функции для журнала истории
+fun loadHistory(context: Context): List<WorkHistory> {
+    val prefs = context.getSharedPreferences("car_maintenance", Context.MODE_PRIVATE)
+    val jsonStr = prefs.getString("history", "[]") ?: "[]"
+    val list = mutableListOf<WorkHistory>()
+    try {
+        val array = JSONArray(jsonStr)
+        for (i in 0 until array.length()) {
+            val o = array.getJSONObject(i)
+            list.add(WorkHistory(o.optLong("id"), o.optLong("carId"), o.optString("workName"), o.optLong("date"), o.optInt("mileage"), o.optString("notes")))
+        }
+    } catch (e: Exception) { e.printStackTrace() }
+    return list
+}
+
+fun saveHistory(context: Context, history: List<WorkHistory>) {
+    val prefs = context.getSharedPreferences("car_maintenance", Context.MODE_PRIVATE)
+    val array = JSONArray()
+    history.forEach { h ->
+        val o = JSONObject()
+        o.put("id", h.id); o.put("carId", h.carId); o.put("workName", h.workName); o.put("date", h.date); o.put("mileage", h.mileage); o.put("notes", h.notes)
+        array.put(o)
+    }
+    prefs.edit().putString("history", array.toString()).apply()
 }
