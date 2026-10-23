@@ -12,7 +12,21 @@ fun loadCars(context: Context): List<Car> {
         val array = JSONArray(jsonStr)
         for (i in 0 until array.length()) {
             val o = array.getJSONObject(i)
-            list.add(Car(o.optString("id"), o.optString("brand"), o.optString("model"), o.optString("year"), o.optString("vin"), o.optString("mileage"), o.optString("engine"), o.optString("fuel"), o.optBoolean("hasLpg"), o.optString("notes"), o.optString("imageUri")))
+            list.add(
+                Car(
+                    id = o.optString("id"),
+                    brand = o.optString("brand"),
+                    model = o.optString("model"),
+                    year = o.optString("year"),
+                    vin = o.optString("vin"),
+                    mileage = o.optString("mileage"),
+                    engine = o.optString("engine"),
+                    fuel = o.optString("fuel"),
+                    hasLpg = o.optBoolean("hasLpg"),
+                    notes = o.optString("notes"),
+                    imageUri = o.optString("imageUri")
+                )
+            )
         }
     } catch (e: Exception) { e.printStackTrace() }
     return list
@@ -37,7 +51,21 @@ fun loadWorks(context: Context): List<MaintenanceWork> {
         val array = JSONArray(jsonStr)
         for (i in 0 until array.length()) {
             val o = array.getJSONObject(i)
-            list.add(MaintenanceWork(o.optString("id"), o.optString("carId"), o.optString("name"), o.optInt("intervalKm"), o.optInt("intervalMonths"), o.optInt("lastMileage"), o.optLong("lastDate"), o.optBoolean("hasLastExecution"), o.optBoolean("skipped"), o.optBoolean("preventive"), o.optString("notes")))
+            list.add(
+                MaintenanceWork(
+                    id = o.optString("id"),
+                    carId = o.optString("carId"),
+                    name = o.optString("name"),
+                    intervalKm = o.optInt("intervalKm"),
+                    intervalMonths = o.optInt("intervalMonths"),
+                    lastMileage = o.optInt("lastMileage"),
+                    lastDate = o.optLong("lastDate"),
+                    hasLastExecution = o.optBoolean("hasLastExecution"),
+                    skipped = o.optBoolean("skipped"),
+                    preventive = o.optBoolean("preventive"),
+                    notes = o.optString("notes")
+                )
+            )
         }
     } catch (e: Exception) { e.printStackTrace() }
     return list
@@ -62,7 +90,16 @@ fun loadHistory(context: Context): List<WorkHistory> {
         val array = JSONArray(jsonStr)
         for (i in 0 until array.length()) {
             val o = array.getJSONObject(i)
-            list.add(WorkHistory(o.optString("id"), o.optString("carId"), o.optString("workName"), o.optLong("date"), o.optInt("mileage"), o.optString("notes")))
+            list.add(
+                WorkHistory(
+                    id = o.optString("id"),
+                    carId = o.optString("carId"), // <-- ИСПРАВЛЕНО ЗДЕСЬ
+                    workName = o.optString("workName"),
+                    date = o.optLong("date"),
+                    mileage = o.optInt("mileage"),
+                    notes = o.optString("notes")
+                )
+            )
         }
     } catch (e: Exception) { e.printStackTrace() }
     return list
@@ -92,7 +129,21 @@ fun loadDefaultTemplate(context: Context): List<MaintenanceWork> {
         val array = JSONArray(jsonStr)
         for (i in 0 until array.length()) {
             val o = array.getJSONObject(i)
-            list.add(MaintenanceWork(o.optString("id"), "", o.optString("name"), o.optInt("intervalKm"), o.optInt("intervalMonths"), 0, 0, false, false, o.optBoolean("preventive"), o.optString("notes")))
+            list.add(
+                MaintenanceWork(
+                    id = o.optString("id"),
+                    carId = "", // Шаблон не привязан к машине
+                    name = o.optString("name"),
+                    intervalKm = o.optInt("intervalKm"),
+                    intervalMonths = o.optInt("intervalMonths"),
+                    lastMileage = 0,
+                    lastDate = 0L,
+                    hasLastExecution = false,
+                    skipped = false,
+                    preventive = o.optBoolean("preventive"),
+                    notes = o.optString("notes")
+                )
+            )
         }
     } catch (e: Exception) { e.printStackTrace() }
     return list
