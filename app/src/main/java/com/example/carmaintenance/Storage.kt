@@ -12,7 +12,7 @@ fun loadCars(context: Context): List<Car> {
         val array = JSONArray(jsonStr)
         for (i in 0 until array.length()) {
             val o = array.getJSONObject(i)
-            list.add(Car(o.optLong("id"), o.optString("brand"), o.optString("model"), o.optString("year"), o.optString("vin"), o.optString("mileage"), o.optString("engine"), o.optString("fuel"), o.optBoolean("hasLpg"), o.optString("notes"), o.optString("imageUri")))
+            list.add(Car(o.optString("id"), o.optString("brand"), o.optString("model"), o.optString("year"), o.optString("vin"), o.optString("mileage"), o.optString("engine"), o.optString("fuel"), o.optBoolean("hasLpg"), o.optString("notes"), o.optString("imageUri")))
         }
     } catch (e: Exception) { e.printStackTrace() }
     return list
@@ -37,7 +37,7 @@ fun loadWorks(context: Context): List<MaintenanceWork> {
         val array = JSONArray(jsonStr)
         for (i in 0 until array.length()) {
             val o = array.getJSONObject(i)
-            list.add(MaintenanceWork(o.optLong("id"), o.optLong("carId"), o.optString("name"), o.optInt("intervalKm"), o.optInt("intervalMonths"), o.optInt("lastMileage"), o.optLong("lastDate"), o.optBoolean("hasLastExecution"), o.optBoolean("skipped"), o.optBoolean("preventive"), o.optString("notes")))
+            list.add(MaintenanceWork(o.optString("id"), o.optString("carId"), o.optString("name"), o.optInt("intervalKm"), o.optInt("intervalMonths"), o.optInt("lastMileage"), o.optLong("lastDate"), o.optBoolean("hasLastExecution"), o.optBoolean("skipped"), o.optBoolean("preventive"), o.optString("notes")))
         }
     } catch (e: Exception) { e.printStackTrace() }
     return list
@@ -62,7 +62,7 @@ fun loadHistory(context: Context): List<WorkHistory> {
         val array = JSONArray(jsonStr)
         for (i in 0 until array.length()) {
             val o = array.getJSONObject(i)
-            list.add(WorkHistory(o.optLong("id"), o.optLong("carId"), o.optString("workName"), o.optLong("date"), o.optInt("mileage"), o.optString("notes")))
+            list.add(WorkHistory(o.optString("id"), o.optString("carId"), o.optString("workName"), o.optLong("date"), o.optInt("mileage"), o.optString("notes")))
         }
     } catch (e: Exception) { e.printStackTrace() }
     return list
@@ -79,12 +79,11 @@ fun saveHistory(context: Context, history: List<WorkHistory>) {
     prefs.edit().putString("history", array.toString()).apply()
 }
 
-// Функции для редактора шаблона
 fun loadDefaultTemplate(context: Context): List<MaintenanceWork> {
     val prefs = context.getSharedPreferences("car_maintenance", Context.MODE_PRIVATE)
     val jsonStr = prefs.getString("default_template", null)
     if (jsonStr == null) {
-        val initial = getDefaultWorks(0L) + getLpgDefaultWorks(0L)
+        val initial = getDefaultWorks("") + getLpgDefaultWorks("")
         saveDefaultTemplate(context, initial)
         return initial
     }
@@ -93,7 +92,7 @@ fun loadDefaultTemplate(context: Context): List<MaintenanceWork> {
         val array = JSONArray(jsonStr)
         for (i in 0 until array.length()) {
             val o = array.getJSONObject(i)
-            list.add(MaintenanceWork(o.optLong("id"), 0L, o.optString("name"), o.optInt("intervalKm"), o.optInt("intervalMonths"), 0, 0, false, false, o.optBoolean("preventive"), o.optString("notes")))
+            list.add(MaintenanceWork(o.optString("id"), "", o.optString("name"), o.optInt("intervalKm"), o.optInt("intervalMonths"), 0, 0, false, false, o.optBoolean("preventive"), o.optString("notes")))
         }
     } catch (e: Exception) { e.printStackTrace() }
     return list
