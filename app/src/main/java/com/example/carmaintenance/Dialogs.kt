@@ -147,9 +147,9 @@ fun AddEditWorkDialog(existingWork: MaintenanceWork?, onDismiss: () -> Unit, onS
     )
 }
 
-// === ДИАЛОГ ДЕЙСТВИЙ (НОВЫЙ СТИЛЬ: ТОЧКИ) ===
+// === ДИАЛОГ ДЕЙСТВИЙ ===
 @Composable
-fun WorkActionsDialog(work: MaintenanceWork, onDismiss: () -> Unit, onComplete: (Int) -> Unit, onSkip: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit) {
+fun WorkActionsDialog(work: MaintenanceWork, onDismiss: () -> Unit, onComplete: (Int) -> Unit, onSkip: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit, onNotDone: () -> Unit) {
     var showCompleteInput by remember { mutableStateOf(false) }
     var mileageInput by remember { mutableStateOf("") }
 
@@ -165,10 +165,23 @@ fun WorkActionsDialog(work: MaintenanceWork, onDismiss: () -> Unit, onComplete: 
                 }
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    // Статусы (с точками)
                     ActionRowButton("Выполнить работу", ColorGreen) { showCompleteInput = true }
-                    ActionRowButton("Пропустить работу", ColorYellow) { onSkip() }
-                    ActionRowButton("Редактировать данные", ColorBlue) { onEdit() }
-                    ActionRowButton("Удалить запись", ColorRed) { onDelete() }
+                    ActionRowButton("Требует внимания", ColorRed) { onNotDone() }
+                    ActionRowButton("Пропустить работу", ColorPurple) { onSkip() }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // Нижний ряд (без точек)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End, 
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(onClick = onEdit) { Text("Изменить", color = TextSecondary, fontSize = 13.sp) }
+                        TextButton(onClick = onDelete) { Text("Удалить", color = TextSecondary, fontSize = 13.sp) }
+                        TextButton(onClick = onDismiss) { Text("Отмена", color = ColorRed, fontSize = 13.sp) }
+                    }
                 }
             }
         },
@@ -176,7 +189,7 @@ fun WorkActionsDialog(work: MaintenanceWork, onDismiss: () -> Unit, onComplete: 
             if (showCompleteInput) TextButton(onClick = { onComplete(mileageInput.toIntOrNull() ?: 0) }) { Text("Сохранить", color = ColorGreen) } 
         },
         dismissButton = { 
-            TextButton(onClick = onDismiss) { Text("Отмена", color = TextSecondary) } 
+            if (showCompleteInput) TextButton(onClick = { showCompleteInput = false }) { Text("Назад", color = TextSecondary) }
         }
     )
 }
