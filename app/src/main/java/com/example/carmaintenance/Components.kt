@@ -93,7 +93,6 @@ fun SpecItem(icon: androidx.compose.ui.graphics.vector.ImageVector, label: Strin
     }
 }
 
-// === ОБНОВЛЕННАЯ КАРТОЧКА РАБОТЫ С БЕЙДЖЕМ ГБО ===
 @Composable 
 fun WorkItemCard(name: String, status: String, statusColor: Color, intervalKm: Int, intervalMonths: Int, lastMileage: Int, currentCarMileage: Int, isLpg: Boolean, onClick: () -> Unit) {
     val periodText = buildString {
@@ -123,12 +122,9 @@ fun WorkItemCard(name: String, status: String, statusColor: Color, intervalKm: I
                 Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(name, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                        // БЕЙДЖ ГБО
                         if (isLpg) {
                             Spacer(modifier = Modifier.width(6.dp))
-                            Surface(color = ColorBlue.copy(alpha = 0.2f), shape = RoundedCornerShape(4.dp)) { 
-                                Text("ГБО", color = ColorBlue, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)) 
-                            }
+                            Surface(color = ColorBlue.copy(alpha = 0.2f), shape = RoundedCornerShape(4.dp)) { Text("ГБО", color = ColorBlue, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)) }
                         }
                     }
                     Spacer(modifier = Modifier.height(4.dp))
@@ -138,16 +134,9 @@ fun WorkItemCard(name: String, status: String, statusColor: Color, intervalKm: I
                     Text(status, color = statusColor, modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp), fontSize = 11.sp, fontWeight = FontWeight.Medium) 
                 }
             }
-            
             if (intervalKm > 0 && lastMileage > 0) {
                 Spacer(modifier = Modifier.height(12.dp))
-                LinearProgressIndicator(
-                    progress = { progress },
-                    modifier = Modifier.fillMaxWidth().height(6.dp),
-                    color = statusColor,
-                    trackColor = TextSecondary.copy(alpha = 0.2f),
-                    strokeCap = StrokeCap.Round
-                )
+                LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth().height(6.dp), color = statusColor, trackColor = TextSecondary.copy(alpha = 0.2f), strokeCap = StrokeCap.Round)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(remainingText, color = statusColor, fontSize = 11.sp, fontWeight = FontWeight.Medium)
             }
