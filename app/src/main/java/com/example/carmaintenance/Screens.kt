@@ -417,7 +417,6 @@ fun TemplateEditorScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     var templateWorks by remember { mutableStateOf(loadDefaultTemplate(context)) }
     var showAddDialog by remember { mutableStateOf(false) }
-    var editingWork by remember { mutableStateOf<MaintenanceWork?>(null) }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -444,7 +443,7 @@ fun TemplateEditorScreen(onBack: () -> Unit) {
         }
         
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = { editingWork = null; showAddDialog = true }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = ColorGreen)) {
+            Button(onClick = { showAddDialog = true }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = ColorGreen)) {
                 Text("Добавить", color = TextPrimary)
             }
         }
@@ -452,7 +451,7 @@ fun TemplateEditorScreen(onBack: () -> Unit) {
 
     if (showAddDialog) {
         AddTemplateWorkDialog(
-            existingWork = editingWork,
+            existingWork = null,
             onDismiss = { showAddDialog = false },
             onSave = { newWork ->
                 templateWorks = templateWorks + newWork
