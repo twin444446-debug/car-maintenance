@@ -37,7 +37,7 @@ fun AppScreen() {
     var selectedCarIndex by remember { mutableIntStateOf(0) }
 
     var showAddCarDialog by remember { mutableStateOf(false) }
-    var editingCar by remember { mutableStateOf<Car?>(null) } // Для редактирования
+    var editingCar by remember { mutableStateOf<Car?>(null) }
     var showAddWorkDialog by remember { mutableStateOf(false) }
     var editingWork by remember { mutableStateOf<MaintenanceWork?>(null) }
     var actionWork by remember { mutableStateOf<MaintenanceWork?>(null) }
@@ -93,7 +93,9 @@ fun AppScreen() {
                     onWorkClick = { actionWork = it },
                     onCarClick = { infoCar = it }
                 )
-                "Работы" -> WorkListScreen(works.filter { it.carId == selectedCar?.id }, selectedCar)
+                "Работы" -> WorkListScreen(works.filter { it.carId == selectedCar?.id }, selectedCar, onAddClick = { 
+                    if (selectedCar != null) { editingWork = null; showAddWorkDialog = true } 
+                })
                 "Регламент" -> RegulationScreen()
                 "Статистика" -> StatisticsScreen(works.filter { it.carId == selectedCar?.id }, selectedCar)
                 "Ещё" -> MoreScreen()
@@ -147,6 +149,7 @@ fun AppScreen() {
             }
         )
     }
+}
 
 // === ГЛАВНЫЙ ЭКРАН ===
 @OptIn(ExperimentalFoundationApi::class)
@@ -200,16 +203,16 @@ fun HomeScreenContent(cars: List<Car>, works: List<MaintenanceWork>, selectedCar
             items(carWorks.size) { index ->
                 val work = carWorks[index]
                 val status = getWorkStatus(work, selectedCar!!)
-                val statusColor = when(status) { "Требуется", "Необходимо выполнить" -> ColorRed; "Пропущена" -> ColorPurple; else -> ColorGreen }
+                val statusColor = when(status) { "Требуется", "Необходимо выполнить" -> ColorRed; "Пропущена" -> ColorPurple; "Скоро" -> ColorYellow; else -> ColorGreen }
                 WorkItemCard(work.name, status, statusColor, work.intervalKm) { onWorkClick(work) }
             }
         }
     }
 }
 
-// === ЭКРАН РАБОТ (С ФИЛЬТРАМИ) ===
+// === ЭКРАН РАБОТ (С ФИЛЬТРАМИ И КНОПКОЙ ДОБАВЛЕНИЯ) ===
 @Composable
-fun WorkListScreen(works: List<MaintenanceWork>, selectedCar: Car?) {
+fun WorkListScreen(works: List<MaintenanceWork>, selectedCar: Car?, onAddClick: () -> Unit) {
     if (selectedCar == null) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Сначала добавьте авто", color = TextSecondary) }; return }
     var filter by remember { mutableStateOf("Все") }
     val filteredWorks = when(filter) {
@@ -227,17 +230,20 @@ fun WorkListScreen(works: List<MaintenanceWork>, selectedCar: Car?) {
             }
         }
         Spacer(modifier = Modifier.height(16.dp))
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(1f)) {
             if (filteredWorks.isEmpty()) {
                 item { Text("Работ нет", color = TextSecondary) }
             } else {
                 items(filteredWorks.size) { index ->
                     val work = filteredWorks[index]
                     val status = getWorkStatus(work, selectedCar)
-                    val statusColor = when(status) { "Требуется", "Необходимо выполнить" -> ColorRed; "Пропущена" -> ColorPurple; else -> ColorGreen }
+                    val statusColor = when(status) { "Требуется", "Необходимо выполнить" -> ColorRed; "Пропущена" -> ColorPurple; "Скоро" -> ColorYellow; else -> ColorGreen }
                     WorkItemCard(work.name, status, statusColor, work.intervalKm) { }
                 }
             }
+        }
+        Button(onClick = onAddClick, modifier = Modifier.fillMaxWidth().padding(top = 8.dp), colors = ButtonDefaults.buttonColors(containerColor = ColorPurple)) {
+            Text("Добавить работу", color = TextPrimary)
         }
     }
 }
@@ -246,15 +252,20 @@ fun WorkListScreen(works: List<MaintenanceWork>, selectedCar: Car?) {
 @Composable
 fun StatisticsScreen(works: List<MaintenanceWork>, selectedCar: Car?) {
     if (selectedCar == null) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Сначала добавьте авто", color = TextSecondary) }; return }
+    
     val total = works.size
     val requires = works.count { getWorkStatus(it, selectedCar) == "Требуется" || getWorkStatus(it, selectedCar) == "Необходимо выполнить" }
+    val soon = works.count { getWorkStatus(it, selectedCar) == "Скоро" }
     val completed = works.count { getWorkStatus(it, selectedCar) == "Выполнено" }
+    val skipped = works.count { getWorkStatus(it, selectedCar) == "Пропущена" }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text("Статистика по ${selectedCar.brand} ${selectedCar.model}", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         StatCard("Всего работ", total.toString(), ColorBlue, Modifier.fillMaxWidth())
         StatCard("Требуют внимания", requires.toString(), ColorRed, Modifier.fillMaxWidth())
+        StatCard("Скоро (Предупредительные)", soon.toString(), ColorYellow, Modifier.fillMaxWidth())
         StatCard("Выполнено", completed.toString(), ColorGreen, Modifier.fillMaxWidth())
+        StatCard("Пропущено", skipped.toString(), ColorPurple, Modifier.fillMaxWidth())
     }
 }
 
@@ -302,12 +313,8 @@ fun CarInfoDialog(car: Car, onDismiss: () -> Unit, onEdit: () -> Unit) {
                 }
             }
         },
-        confirmButton = {
-            TextButton(onClick = onEdit) { Text("Редактировать", color = ColorBlue) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Закрыть", color = TextSecondary) }
-        }
+        confirmButton = { TextButton(onClick = onEdit) { Text("Редактировать", color = ColorBlue) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Закрыть", color = TextSecondary) } }
     )
 }
 
@@ -328,20 +335,11 @@ fun CarCard(car: Car, onClick: () -> Unit) {
     ) {
         Column {
             Box(modifier = Modifier.height(200.dp).fillMaxWidth()) {
-                // Отображение фото, если оно есть
                 if (car.imageUri.isNotEmpty()) {
-                    AsyncImage(
-                        model = Uri.parse(car.imageUri),
-                        contentDescription = "Car Photo",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
+                    AsyncImage(model = Uri.parse(car.imageUri), contentDescription = "Car Photo", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                 } else {
-                    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF1E2A45)), contentAlignment = Alignment.Center) { 
-                        Icon(Icons.Default.Home, null, tint = TextSecondary.copy(alpha = 0.5f), modifier = Modifier.size(64.dp)) 
-                    }
+                    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF1E2A45)), contentAlignment = Alignment.Center) { Icon(Icons.Default.Home, null, tint = TextSecondary.copy(alpha = 0.5f), modifier = Modifier.size(64.dp)) }
                 }
-                
                 Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(colors = listOf(Color.Transparent, CardColor.copy(alpha = 0.9f)), startY = 300f)))
                 Column(modifier = Modifier.align(Alignment.BottomStart).padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -377,7 +375,7 @@ fun SpecItem(icon: androidx.compose.ui.graphics.vector.ImageVector, label: Strin
 @Composable fun StatCard(title: String, value: String, color: Color, modifier: Modifier) {
     Card(modifier = modifier, shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = CardColor)) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(modifier = Modifier.size(36.dp).background(color.copy(alpha = 0.2f), CircleShape), contentAlignment = Alignment.Center) { Icon(if(title == "Всего работ") Icons.Default.Check else Icons.Default.Warning, null, tint = color) }
+            Box(modifier = Modifier.size(36.dp).background(color.copy(alpha = 0.2f), CircleShape), contentAlignment = Alignment.Center) { Icon(Icons.Default.Check, null, tint = color) }
             Spacer(modifier = Modifier.width(12.dp))
             Column { Text(title, color = TextSecondary, fontSize = 12.sp); Text(value, color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold) }
         }
