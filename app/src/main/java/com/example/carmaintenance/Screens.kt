@@ -58,7 +58,12 @@ fun AppScreen() {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(Icons.Default.Menu, contentDescription = "Menu", tint = TextPrimary)
-                Text(currentScreen, color = TextPrimary, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    text = currentScreen,
+                    color = TextPrimary,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold
+                )
                 Icon(Icons.Default.Settings, contentDescription = "Settings", tint = TextPrimary)
             }
         },
@@ -89,7 +94,11 @@ fun AppScreen() {
             }
         }
     ) { paddingValues ->
-        Box(modifier = Modifier.padding(paddingValues).fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .padding(paddingValues)
+                .fillMaxSize()
+        ) {
             when (currentScreen) {
                 "Главная" -> HomeScreenContent(
                     cars = cars,
@@ -234,7 +243,10 @@ fun AppScreen() {
             work = actionWork!!,
             onDismiss = { actionWork = null },
             onComplete = { newMileage, newDate, newNotes ->
-                works = works.map { if (it.id == actionWork!!.id) it.copy(lastMileage = newMileage, lastDate = newDate, hasLastExecution = true, skipped = false) else it }
+                works = works.map { 
+                    if (it.id == actionWork!!.id) it.copy(lastMileage = newMileage, lastDate = newDate, hasLastExecution = true, skipped = false) 
+                    else it 
+                }
                 saveWorks(context, works)
                 val entry = WorkHistory(
                     carId = selectedCar!!.id,
@@ -263,7 +275,10 @@ fun AppScreen() {
                 actionWork = null
             },
             onNotDone = {
-                works = works.map { if (it.id == actionWork!!.id) it.copy(skipped = false, hasLastExecution = false) else it }
+                works = works.map { 
+                    if (it.id == actionWork!!.id) it.copy(skipped = false, hasLastExecution = false) 
+                    else it 
+                }
                 saveWorks(context, works)
                 actionWork = null
             },
@@ -308,7 +323,9 @@ fun HomeScreenContent(
                 }
                 if (cars.size > 1) {
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
                         horizontalArrangement = Arrangement.Center
                     ) {
                         repeat(cars.size) { i ->
@@ -316,7 +333,10 @@ fun HomeScreenContent(
                                 modifier = Modifier
                                     .padding(horizontal = 4.dp)
                                     .size(8.dp)
-                                    .background(if (i == pagerState.currentPage) ColorGreen else TextSecondary.copy(alpha = 0.3f), CircleShape)
+                                    .background(
+                                        color = if (i == pagerState.currentPage) ColorGreen else TextSecondary.copy(alpha = 0.3f),
+                                        shape = CircleShape
+                                    )
                             )
                         }
                     }
@@ -327,21 +347,61 @@ fun HomeScreenContent(
             item {
                 val requires = carWorks.count { getWorkStatus(it, selectedCar) == "Требуется" || getWorkStatus(it, selectedCar) == "Необходимо выполнить" }
                 val total = carWorks.size + carHistory.size
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    StatCard("Всего работ", total.toString(), ColorGreen, Modifier.weight(1f))
-                    StatCard("Требуют", requires.toString(), ColorRed, Modifier.weight(1f))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    StatCard(
+                        title = "Всего работ",
+                        value = total.toString(),
+                        color = ColorGreen,
+                        modifier = Modifier.weight(1f)
+                    )
+                    StatCard(
+                        title = "Требуют",
+                        value = requires.toString(),
+                        color = ColorRed,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
         }
         item {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                QuickActionBtn("Добавить авто", Icons.Default.Home, ColorGreen, Modifier.weight(1f), onAddCarClick)
-                QuickActionBtn("Добавить работу", Icons.Default.Build, ColorPurple, Modifier.weight(1f), onAddWorkClick)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                QuickActionBtn(
+                    text = "Добавить авто",
+                    icon = Icons.Default.Home,
+                    color = ColorGreen,
+                    modifier = Modifier.weight(1f),
+                    onClick = onAddCarClick
+                )
+                QuickActionBtn(
+                    text = "Добавить работу",
+                    icon = Icons.Default.Build,
+                    color = ColorPurple,
+                    modifier = Modifier.weight(1f),
+                    onClick = onAddWorkClick
+                )
             }
         }
-        item { Text("Ближайшие работы", color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
+        item {
+            Text(
+                text = "Ближайшие работы",
+                color = TextPrimary,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
         if (carWorks.isEmpty()) {
-            item { Text("Работ пока нет", color = TextSecondary) }
+            item {
+                Text(
+                    text = "Работ пока нет",
+                    color = TextSecondary
+                )
+            }
         } else {
             items(carWorks.size) { index ->
                 val work = carWorks[index]
@@ -362,7 +422,9 @@ fun HomeScreenContent(
                     lastMileage = work.lastMileage,
                     currentCarMileage = currentMileage,
                     isLpg = work.name.startsWith("ГБО:")
-                ) { onWorkClick(work) }
+                ) {
+                    onWorkClick(work)
+                }
             }
         }
     }
@@ -375,17 +437,35 @@ fun HistoryScreen(
     onAddWorkClick: () -> Unit
 ) {
     if (selectedCar == null) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Сначала добавьте авто", color = TextSecondary) }
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(text = "Сначала добавьте авто", color = TextSecondary)
+        }
         return
     }
     val sortedHistory = history.sortedByDescending { it.date }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Журнал работ: ${selectedCar.brand} ${selectedCar.model}", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Text(
+            text = "Журнал работ: ${selectedCar.brand} ${selectedCar.model}",
+            color = TextPrimary,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold
+        )
         Spacer(modifier = Modifier.height(16.dp))
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(1f)) {
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.weight(1f)
+        ) {
             if (sortedHistory.isEmpty()) {
-                item { Text("Записей пока нет. Выполните работу в регламенте или добавьте ремонт.", color = TextSecondary) }
+                item {
+                    Text(
+                        text = "Записей пока нет. Выполните работу в регламенте или добавьте ремонт.",
+                        color = TextSecondary
+                    )
+                }
             } else {
                 items(sortedHistory.size) { index ->
                     val record = sortedHistory[index]
@@ -396,15 +476,35 @@ fun HistoryScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text(record.workName, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                                Text(dateStr, color = TextSecondary, fontSize = 13.sp)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = record.workName,
+                                    color = TextPrimary,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp
+                                )
+                                Text(
+                                    text = dateStr,
+                                    color = TextSecondary,
+                                    fontSize = 13.sp
+                                )
                             }
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text("Пробег: ${record.mileage} км", color = ColorBlue, fontSize = 13.sp)
+                            Text(
+                                text = "Пробег: ${record.mileage} км",
+                                color = ColorBlue,
+                                fontSize = 13.sp
+                            )
                             if (record.notes.isNotBlank()) {
                                 Spacer(modifier = Modifier.height(4.dp))
-                                Text("Примечание: ${record.notes}", color = TextSecondary, fontSize = 13.sp)
+                                Text(
+                                    text = "Примечание: ${record.notes}",
+                                    color = TextSecondary,
+                                    fontSize = 13.sp
+                                )
                             }
                         }
                     }
@@ -413,10 +513,12 @@ fun HistoryScreen(
         }
         Button(
             onClick = onAddWorkClick,
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp),
             colors = ButtonDefaults.buttonColors(containerColor = ColorPurple)
         ) {
-            Text("Добавить запись (ремонт)", color = TextPrimary)
+            Text(text = "Добавить запись (ремонт)", color = TextPrimary)
         }
     }
 }
@@ -429,7 +531,12 @@ fun RegulationScreen(
     onAddClick: (Boolean) -> Unit
 ) {
     if (selectedCar == null) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Сначала добавьте авто", color = TextSecondary) }
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(text = "Сначала добавьте авто", color = TextSecondary)
+        }
         return
     }
     
@@ -451,16 +558,35 @@ fun RegulationScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            item { Text("Регламент: ${selectedCar.brand} ${selectedCar.model} (${selectedCar.mileage} км)", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold) }
+            item {
+                Text(
+                    text = "Регламент: ${selectedCar.brand} ${selectedCar.model} (${selectedCar.mileage} км)",
+                    color = TextPrimary,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
 
             item { 
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text("🚗 Автомобиль", color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
-                    TextButton(onClick = { onAddClick(false) }) { Text("+ Регламентная", color = ColorGreen, fontSize = 13.sp) }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "🚗 Автомобиль",
+                        color = TextPrimary,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                    TextButton(onClick = { onAddClick(false) }) {
+                        Text(text = "+ Регламентная", color = ColorGreen, fontSize = 13.sp)
+                    }
                 }
             }
             if (reqRegular.isNotEmpty()) {
-                item { RegulationHeader("Требуют внимания", ColorRed) }
+                item { RegulationHeader(title = "Требуют внимания", color = ColorRed) }
                 items(reqRegular.size) { i ->
                     val w = reqRegular[i]
                     WorkItemCard(
@@ -472,11 +598,13 @@ fun RegulationScreen(
                         lastMileage = w.lastMileage,
                         currentCarMileage = currentMileage,
                         isLpg = false
-                    ) { onWorkClick(w) }
+                    ) {
+                        onWorkClick(w)
+                    }
                 }
             }
             if (soonRegular.isNotEmpty()) {
-                item { RegulationHeader("Скоро", ColorYellow) }
+                item { RegulationHeader(title = "Скоро", color = ColorYellow) }
                 items(soonRegular.size) { i ->
                     val w = soonRegular[i]
                     WorkItemCard(
@@ -488,11 +616,13 @@ fun RegulationScreen(
                         lastMileage = w.lastMileage,
                         currentCarMileage = currentMileage,
                         isLpg = false
-                    ) { onWorkClick(w) }
+                    ) {
+                        onWorkClick(w)
+                    }
                 }
             }
             if (okRegular.isNotEmpty()) {
-                item { RegulationHeader("В порядке", ColorGreen) }
+                item { RegulationHeader(title = "В порядке", color = ColorGreen) }
                 items(okRegular.size) { i ->
                     val w = okRegular[i]
                     WorkItemCard(
@@ -504,21 +634,43 @@ fun RegulationScreen(
                         lastMileage = w.lastMileage,
                         currentCarMileage = currentMileage,
                         isLpg = false
-                    ) { onWorkClick(w) }
+                    ) {
+                        onWorkClick(w)
+                    }
                 }
             }
             if (regularWorks.isEmpty()) {
-                item { Text("Нет работ по автомобилю", color = TextSecondary, fontSize = 14.sp, modifier = Modifier.padding(start = 16.dp)) }
+                item {
+                    Text(
+                        text = "Нет работ по автомобилю",
+                        color = TextSecondary,
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(start = 16.dp)
+                    )
+                }
             }
 
             item { 
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 16.dp)) {
-                    Text("⛽ ГБО", color = TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    TextButton(onClick = { onAddClick(true) }) { Text("+ Регламентная", color = ColorBlue, fontSize = 13.sp) }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "⛽ ГБО",
+                        color = TextPrimary,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    TextButton(onClick = { onAddClick(true) }) {
+                        Text(text = "+ Регламентная", color = ColorBlue, fontSize = 13.sp)
+                    }
                 }
             }
             if (reqLpg.isNotEmpty()) {
-                item { RegulationHeader("Требуют внимания", ColorRed) }
+                item { RegulationHeader(title = "Требуют внимания", color = ColorRed) }
                 items(reqLpg.size) { i ->
                     val w = reqLpg[i]
                     WorkItemCard(
@@ -530,11 +682,13 @@ fun RegulationScreen(
                         lastMileage = w.lastMileage,
                         currentCarMileage = currentMileage,
                         isLpg = true
-                    ) { onWorkClick(w) }
+                    ) {
+                        onWorkClick(w)
+                    }
                 }
             }
             if (soonLpg.isNotEmpty()) {
-                item { RegulationHeader("Скоро", ColorYellow) }
+                item { RegulationHeader(title = "Скоро", color = ColorYellow) }
                 items(soonLpg.size) { i ->
                     val w = soonLpg[i]
                     WorkItemCard(
@@ -546,11 +700,13 @@ fun RegulationScreen(
                         lastMileage = w.lastMileage,
                         currentCarMileage = currentMileage,
                         isLpg = true
-                    ) { onWorkClick(w) }
+                    ) {
+                        onWorkClick(w)
+                    }
                 }
             }
             if (okLpg.isNotEmpty()) {
-                item { RegulationHeader("В порядке", ColorGreen) }
+                item { RegulationHeader(title = "В порядке", color = ColorGreen) }
                 items(okLpg.size) { i ->
                     val w = okLpg[i]
                     WorkItemCard(
@@ -562,11 +718,20 @@ fun RegulationScreen(
                         lastMileage = w.lastMileage,
                         currentCarMileage = currentMileage,
                         isLpg = true
-                    ) { onWorkClick(w) }
+                    ) {
+                        onWorkClick(w)
+                    }
                 }
             }
             if (lpgWorks.isEmpty()) {
-                item { Text("Нет работ по ГБО", color = TextSecondary, fontSize = 14.sp, modifier = Modifier.padding(start = 16.dp)) }
+                item {
+                    Text(
+                        text = "Нет работ по ГБО",
+                        color = TextSecondary,
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(start = 16.dp)
+                    )
+                }
             }
         }
     }
@@ -574,10 +739,22 @@ fun RegulationScreen(
 
 @Composable
 fun RegulationHeader(title: String, color: Color) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 4.dp)) {
-        Box(modifier = Modifier.size(8.dp).background(color, CircleShape))
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(vertical = 4.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .background(color = color, shape = CircleShape)
+        )
         Spacer(modifier = Modifier.width(8.dp))
-        Text(title, color = color, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        Text(
+            text = title,
+            color = color,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 
@@ -589,7 +766,12 @@ fun StatisticsScreen(
     onWorkClick: (MaintenanceWork) -> Unit
 ) {
     if (selectedCar == null) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Сначала добавьте авто", color = TextSecondary) }
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(text = "Сначала добавьте авто", color = TextSecondary)
+        }
         return
     }
     
@@ -602,47 +784,97 @@ fun StatisticsScreen(
     val extraHistory = totalHistory - plannedHistory
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        item { Text("Аналитика: ${selectedCar.brand} ${selectedCar.model}", color = TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold) }
-
-        item { Text("Состояние регламента", color = TextSecondary, fontSize = 14.sp, fontWeight = FontWeight.Bold) }
         item {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                MiniStatCard("В порядке", ok.toString(), ColorGreen, Modifier.weight(1f))
-                MiniStatCard("Скоро", soon.toString(), ColorYellow, Modifier.weight(1f))
-                MiniStatCard("Требуют", requires.toString(), ColorRed, Modifier.weight(1f))
+            Text(
+                text = "Аналитика: ${selectedCar.brand} ${selectedCar.model}",
+                color = TextPrimary,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        item {
+            Text(
+                text = "Состояние регламента",
+                color = TextSecondary,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                MiniStatCard(title = "В порядке", value = ok.toString(), color = ColorGreen, modifier = Modifier.weight(1f))
+                MiniStatCard(title = "Скоро", value = soon.toString(), color = ColorYellow, modifier = Modifier.weight(1f))
+                MiniStatCard(title = "Требуют", value = requires.toString(), color = ColorRed, modifier = Modifier.weight(1f))
             }
         }
 
-        item { Text("Журнал работ (всего: $totalHistory)", color = TextSecondary, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp)) }
+        item {
+            Text(
+                text = "Журнал работ (всего: $totalHistory)",
+                color = TextSecondary,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
         item {
             Card(
                 colors = CardDefaults.cardColors(containerColor = CardColor),
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Плановые ТО:", color = TextPrimary)
-                        Text(plannedHistory.toString(), color = ColorGreen, fontWeight = FontWeight.Bold)
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(text = "Плановые ТО:", color = TextPrimary)
+                        Text(text = plannedHistory.toString(), color = ColorGreen, fontWeight = FontWeight.Bold)
                     }
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Внеплановые ремонты:", color = TextPrimary)
-                        Text(extraHistory.toString(), color = ColorPurple, fontWeight = FontWeight.Bold)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(text = "Внеплановые ремонты:", color = TextPrimary)
+                        Text(text = extraHistory.toString(), color = ColorPurple, fontWeight = FontWeight.Bold)
                     }
                     Divider(color = TextSecondary.copy(alpha = 0.2f))
-                    Text("Всего записей: $totalHistory", color = TextPrimary, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "Всего записей: $totalHistory",
+                        color = TextPrimary,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }
 
-        item { Text("Последние работы", color = TextSecondary, fontSize = 14.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp)) }
+        item {
+            Text(
+                text = "Последние работы",
+                color = TextSecondary,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
         
         val recentHistory = history.sortedByDescending { it.date }.take(3)
         if (recentHistory.isEmpty()) {
-            item { Text("Записей пока нет", color = TextSecondary) }
+            item {
+                Text(text = "Записей пока нет", color = TextSecondary)
+            }
         } else {
             items(recentHistory.size) { index ->
                 val record = recentHistory[index]
@@ -653,11 +885,27 @@ fun StatisticsScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text(record.workName, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            Text(dateStr, color = TextSecondary, fontSize = 12.sp)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = record.workName,
+                                color = TextPrimary,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                            Text(
+                                text = dateStr,
+                                color = TextSecondary,
+                                fontSize = 12.sp
+                            )
                         }
-                        Text("Пробег: ${record.mileage} км", color = ColorBlue, fontSize = 12.sp)
+                        Text(
+                            text = "Пробег: ${record.mileage} км",
+                            color = ColorBlue,
+                            fontSize = 12.sp
+                        )
                     }
                 }
             }
@@ -666,11 +914,33 @@ fun StatisticsScreen(
 }
 
 @Composable
-fun MiniStatCard(title: String, value: String, color: Color, modifier: Modifier) {
-    Card(modifier = modifier, shape = RoundedCornerShape(8.dp), colors = CardDefaults.cardColors(containerColor = CardColor)) {
-        Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(value, color = color, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-            Text(title, color = TextSecondary, fontSize = 11.sp, maxLines = 1)
+fun MiniStatCard(
+    title: String,
+    value: String,
+    color: Color,
+    modifier: Modifier
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = CardColor)
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = value,
+                color = color,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = title,
+                color = TextSecondary,
+                fontSize = 11.sp,
+                maxLines = 1
+            )
         }
     }
 }
