@@ -5,6 +5,7 @@ import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -186,7 +187,8 @@ fun AppScreen() {
                     Triple("Работы", Icons.Filled.List, Icons.Outlined.List),
                     Triple("Регламент", Icons.Filled.DateRange, Icons.Outlined.DateRange),
                     Triple("Статистика", Icons.Filled.Info, Icons.Outlined.Info),
-                    Triple("Ещё", Icons.Filled.MoreHoriz, Icons.Outlined.MoreHoriz)
+                    // Заменили MoreHoriz на MoreVert
+                    Triple("Ещё", Icons.Filled.MoreVert, Icons.Outlined.MoreVert)
                 )
                 navItems.forEach { (title, filledIcon, outlinedIcon) ->
                     NavigationBarItem(
@@ -259,6 +261,7 @@ fun AppScreen() {
 }
 
 // === ЭКРАНЫ ===
+@OptIn(ExperimentalFoundationApi::class) // Разрешаем использовать экспериментальный HorizontalPager
 @Composable
 fun HomeScreenContent(cars: List<Car>, works: List<MaintenanceWork>, selectedCarIndex: Int, onCarSwipe: (Int) -> Unit, onAddCarClick: () -> Unit, onAddWorkClick: () -> Unit, onWorkClick: (MaintenanceWork) -> Unit) {
     val selectedCar = cars.getOrNull(selectedCarIndex)
@@ -287,11 +290,13 @@ fun HomeScreenContent(cars: List<Car>, works: List<MaintenanceWork>, selectedCar
             }
         }
 
-        item {
-            val requires = carWorks.count { getWorkStatus(it, selectedCar!!) == "Требуется" || getWorkStatus(it, selectedCar!!) == "Необходимо выполнить" }
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                StatCard("Всего работ", carWorks.size.toString(), ColorGreen, Modifier.weight(1f))
-                StatCard("Требуют", requires.toString(), ColorRed, Modifier.weight(1f))
+        if (selectedCar != null) {
+            item {
+                val requires = carWorks.count { getWorkStatus(it, selectedCar) == "Требуется" || getWorkStatus(it, selectedCar) == "Необходимо выполнить" }
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    StatCard("Всего работ", carWorks.size.toString(), ColorGreen, Modifier.weight(1f))
+                    StatCard("Требуют", requires.toString(), ColorRed, Modifier.weight(1f))
+                }
             }
         }
 
