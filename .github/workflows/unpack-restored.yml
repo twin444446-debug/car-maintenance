@@ -1,5 +1,4 @@
-
-name: Check restored archive
+name: Verify restored archive APK
 
 on:
   workflow_dispatch:
@@ -8,58 +7,75 @@ permissions:
   contents: read
 
 jobs:
-  check-archive:
+  verify:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout main
         uses: actions/checkout@v4
 
-      - name: Check archive exists
+      - name: Verify archive exists
         run: |
           set -e
-          if [ ! -f "car-maintenance-migration-fix.zip" ]; then
-            echo "::error::Archive car-maintenance-migration-fix.zip not found in repository root"
+          ARCHIVE="car-maintenance-migration-fix.zip"
+          if [ ! -f "$ARCHIVE" ]; then
+            echo "::error::Archive not found: $ARCHIVE"
+            echo "Files in repository root:"
+            ls -la
             exit 1
           fi
-          echo "Archive found"
+          echo "Archive found: $ARCHIVE"
 
-      - name: Validate and extract archive
+      - name: Validate archive
+        run: unzip -t car-maintenance-migration-fix.zip
+
+      - name: Extract archive
         run: |
           set -e
-          unzip -t car-maintenance-migration-fix.zip
-          mkdir -p /tmp/archive-check
-          unzip -q car-maintenance-migration-fix.zip -d /tmp/archive-check
+          mkdir -p "$RUNNER_TEMP/restored"
+          unzip -q car-maintenance-migration-fix.zip \
+            -d "$RUNNER_TEMP/restored"
+          find "$RUNNER_TEMP/restored" -maxdepth 4 \
+            -name settings.gradle.kts -print
 
-      - name: Locate Gradle project
+      - name: Find project root
         run: |
           set -e
-          SETTINGS=$(find /tmp/archive-check -type f -name settings.gradle.kts | head -n 1)
+          SETTINGS=$(find "$RUNNER_TEMP/restored" \
+            -type f -name settings.gradle.kts | head -n 1)
           if [ -z "$SETTINGS" ]; then
             echo "::error::settings.gradle.kts not found in archive"
             exit 1
           fi
+
           ROOT=$(dirname "$SETTINGS")
           echo "PROJECT_ROOT=$ROOT" >> "$GITHUB_ENV"
-          echo "Found project at: $ROOT"
+
           test -f "$ROOT/build.gradle.kts"
           test -f "$ROOT/app/build.gradle.kts"
           test -f "$ROOT/app/src/main/AndroidManifest.xml"
 
-      - name: Check source files
-        run: |
-          set -e
-          find "$PROJECT_ROOT/app/src/main/java" -type f -name '*.kt' -print
-          COUNT=$(find "$PROJECT_ROOT/app/src/main/java" -type f -name '*.kt' | wc -l)
-          if [ "$COUNT" -eq 0 ]; then
-            echo "::error::No Kotlin source files found"
-            exit 1
-          fi
-          echo "Kotlin files found: $COUNT"
+          echo "Project root: $ROOT"
+          echo "Project files verified"
 
-      - name: Build APK
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.8.1'
+
+      - name: Build APK from extracted archive
         working-directory: ${{ env.PROJECT_ROOT }}
-        run: |
-          set -e
-          gradle --version
-          gradle --no-daemon assembleDebug
+        run: gradle --no-daemon assembleDebug
+
+      - name: Upload APK from extracted archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: Car-Maintenance-Archive-Test-APK
+          path: ${{ env.PROJECT_ROOT }}/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
