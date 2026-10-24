@@ -1,3 +1,49 @@
+name: Verify restored archive APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+
+      - name: Verify archive exists
+        shell: bash
+        run: |
+          set -e
+          ARCHIVE="car-maintenance-migration-fix.zip"
+
+          if [ ! -f "$ARCHIVE" ]; then
+            echo "::error::Archive not found: $ARCHIVE"
+            echo "Files in repository root:"
+            ls -la
+            exit 1
+          fi
+
+          echo "Archive found: $ARCHIVE"
+
+      - name: Validate archive
+        run: unzip -t car-maintenance-migration-fix.zip
+
+      - name: Extract archive
+        shell: bash
+        run: |
+          set -e
+          mkdir -p "$RUNNER_TEMP/restored"
+          unzip -q car-maintenance-migration-fix.zip \
+            -d "$RUNNER_TEMP/restored"
+
+          echo "Gradle settings files found:"
+          find "$RUNNER_TEMP/restored" \
+            -type f -name settings.gradle.kts -print
+
       - name: Find project root
         shell: bash
         run: |
@@ -18,10 +64,33 @@
 
           if [ -z "$ROOT" ]; then
             echo "::error::Project root not found"
-            find "$RUNNER_TEMP/restored" -maxdepth 6 -type f
+            echo "Files found in extracted archive:"
+            find "$RUNNER_TEMP/restored" -maxdepth 7 -type f
             exit 1
           fi
 
           echo "PROJECT_ROOT=$ROOT" >> "$GITHUB_ENV"
           echo "Project root: $ROOT"
           echo "Project files verified"
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.8.1'
+
+      - name: Build APK from extracted archive
+        working-directory: ${{ env.PROJECT_ROOT }}
+        run: gradle --no-daemon assembleDebug
+
+      - name: Upload APK from extracted archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: Car-Maintenance-Archive-Test-APK
+          path: ${{ env.PROJECT_ROOT }}/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
